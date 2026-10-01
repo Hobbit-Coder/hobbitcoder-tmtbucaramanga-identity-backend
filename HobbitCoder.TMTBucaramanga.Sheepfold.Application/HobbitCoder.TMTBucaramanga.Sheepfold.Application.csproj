@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\HobbitCoder.TMTBucaramanga.Sheepfold.Domain\HobbitCoder.TMTBucaramanga.Sheepfold.Domain.csproj" />
+	</ItemGroup>
+</Project>
