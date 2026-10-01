@@ -1,7 +1,7 @@
-using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Services;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Services;
 
 /// <summary>
 /// Mediador que resuelve el handler de un request y lo ejecuta envuelto en la cadena

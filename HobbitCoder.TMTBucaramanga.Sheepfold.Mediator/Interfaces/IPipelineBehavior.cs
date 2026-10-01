@@ -1,4 +1,4 @@
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Representa el siguiente eslabón de la cadena: el behavior que sigue o, al final, el handler.

@@ -1,6 +1,6 @@
-﻿using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Models;
+﻿using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Models;
 
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Interfaz marcadora para comandos y queries que producen una respuesta.

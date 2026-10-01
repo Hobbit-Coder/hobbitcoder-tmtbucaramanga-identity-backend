@@ -5,6 +5,7 @@
   <Folder Name="/2.Domain/">
     <Project Path="HobbitCoder.TMTBucaramanga.Sheepfold.Application/HobbitCoder.TMTBucaramanga.Sheepfold.Application.csproj" Id="4a10520c-88a0-4c6d-a886-b2761f98b117" />
     <Project Path="HobbitCoder.TMTBucaramanga.Sheepfold.Domain/HobbitCoder.TMTBucaramanga.Sheepfold.Domain.csproj" Id="08de0d38-187c-4b76-8cc9-f0c70c702144" />
+    <Project Path="HobbitCoder.TMTBucaramanga.Sheepfold.Mediator/HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.csproj" />
   </Folder>
   <Folder Name="/3.Infrastructure/">
     <Project Path="HobbitCoder.TMTBucaramanga.Sheepfold.Infrastructure/HobbitCoder.TMTBucaramanga.Sheepfold.Infrastructure.csproj" Id="983c9a49-fddc-42bb-8017-c5941458d428" />

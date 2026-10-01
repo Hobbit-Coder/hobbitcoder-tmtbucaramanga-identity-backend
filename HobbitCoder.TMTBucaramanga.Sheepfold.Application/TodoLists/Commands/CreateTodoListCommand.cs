@@ -2,6 +2,7 @@
 using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Domain.Enums;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;

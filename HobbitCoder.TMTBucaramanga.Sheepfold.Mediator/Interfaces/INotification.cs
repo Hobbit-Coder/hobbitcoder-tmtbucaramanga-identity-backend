@@ -1,4 +1,4 @@
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Interfaz marcadora para notificaciones (eventos) que se publican a cero o más handlers.

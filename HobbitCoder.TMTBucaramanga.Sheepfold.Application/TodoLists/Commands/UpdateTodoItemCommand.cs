@@ -1,10 +1,11 @@
 using FluentValidation;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Exceptions;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
-using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Models;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Application.TodoLists.Notifications;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Sheepfold.Domain.Enums;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.TodoLists.Commands;

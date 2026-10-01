@@ -1,6 +1,6 @@
-using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Publishers;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Publishers;
 
 /// <summary>
 /// Publisher por defecto: ejecuta los handlers uno a uno, en el orden de registro,

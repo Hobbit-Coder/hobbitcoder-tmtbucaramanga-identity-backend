@@ -1,6 +1,6 @@
-using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Publishers;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Publishers;
 
 /// <summary>
 /// Ejecuta todos los handlers de forma concurrente y espera a que terminen todos.
@@ -8,8 +8,7 @@ namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Publishers;
 /// </summary>
 /// <remarks>
 /// Los handlers comparten el scope de la petición: no usar este publisher si más de un
-/// handler accede al <see cref="IApplicationDbContext"/>, porque el DbContext no admite
-/// operaciones concurrentes.
+/// handler accede al mismo DbContext, porque el DbContext no admite operaciones concurrentes.
 /// </remarks>
 public sealed class TaskWhenAllPublisher : INotificationPublisher
 {

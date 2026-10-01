@@ -1,4 +1,4 @@
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Define un handler para procesar un request y producir una respuesta.

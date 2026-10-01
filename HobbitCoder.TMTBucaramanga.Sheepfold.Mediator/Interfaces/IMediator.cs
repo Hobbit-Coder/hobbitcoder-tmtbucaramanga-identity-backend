@@ -1,4 +1,4 @@
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Define el contrato para el mediador que envía requests a sus handlers correspondientes

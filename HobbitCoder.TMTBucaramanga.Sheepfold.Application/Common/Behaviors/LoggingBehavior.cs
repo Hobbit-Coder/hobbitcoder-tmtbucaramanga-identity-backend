@@ -1,4 +1,5 @@
 using HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;

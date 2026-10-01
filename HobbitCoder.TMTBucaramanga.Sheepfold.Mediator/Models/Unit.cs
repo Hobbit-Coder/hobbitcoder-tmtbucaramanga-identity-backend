@@ -1,4 +1,4 @@
-﻿namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Models;
+﻿namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Models;
 
 public readonly struct Unit
 {

@@ -1,4 +1,4 @@
-namespace HobbitCoder.TMTBucaramanga.Sheepfold.Application.Common.Interfaces;
+namespace HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.Interfaces;
 
 /// <summary>
 /// Envuelve un handler de notificación ya resuelto para que el publisher pueda invocarlo

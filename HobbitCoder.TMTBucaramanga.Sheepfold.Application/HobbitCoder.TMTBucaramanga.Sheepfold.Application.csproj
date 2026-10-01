@@ -10,5 +10,6 @@
 	
 	<ItemGroup>
 	  <ProjectReference Include="..\HobbitCoder.TMTBucaramanga.Sheepfold.Domain\HobbitCoder.TMTBucaramanga.Sheepfold.Domain.csproj" />
+	  <ProjectReference Include="..\HobbitCoder.TMTBucaramanga.Sheepfold.Mediator\HobbitCoder.TMTBucaramanga.Sheepfold.Mediator.csproj" />
 	</ItemGroup>
 </Project>
