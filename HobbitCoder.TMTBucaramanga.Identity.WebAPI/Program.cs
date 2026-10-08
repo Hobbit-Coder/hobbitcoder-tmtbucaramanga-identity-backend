@@ -1,0 +1,68 @@
+using HobbitCoder.TMTBucaramanga.Identity.Application;
+using HobbitCoder.TMTBucaramanga.Identity.WebAPI;
+using HobbitCoder.TMTBucaramanga.Identity.WebAPI.Handlers;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Cargar variables de entorno en la configuración
+builder.Configuration.AddEnvironmentVariables();
+
+// Add services to the container.
+builder.AddPersistence();
+builder.AddApplication();
+builder.AddWebAPI();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ErrorExceptionHandler>();
+
+builder.Services.AddControllers();
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseCors();
+
+app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            duration = report.TotalDuration,
+            entries = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                data = entry.Value.Data,
+                exception = app.Environment.IsDevelopment() ? entry.Value.Exception?.Message : null,
+                duration = entry.Value.Duration.ToString(),
+                tags = entry.Value.Tags
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+await app.RunAsync();

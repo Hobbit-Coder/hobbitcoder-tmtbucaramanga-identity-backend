@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\HobbitCoder.TMTBucaramanga.Identity.Domain\HobbitCoder.TMTBucaramanga.Identity.Domain.csproj" />
+	  <ProjectReference Include="..\HobbitCoder.TMTBucaramanga.Identity.Mediator\HobbitCoder.TMTBucaramanga.Identity.Mediator.csproj" />
+	</ItemGroup>
+</Project>

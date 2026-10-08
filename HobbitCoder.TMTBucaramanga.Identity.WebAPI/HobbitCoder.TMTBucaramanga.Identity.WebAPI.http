@@ -1,0 +1,177 @@
+@HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress = https://localhost:7101
+# Token: el accessToken que devuelve "Iniciar sesión" (audiencia HobbitCoder.TMTBucaramanga.Identity).
+# Es obligatorio en los endpoints con [Authorize]; /api/users además exige el rol Admin.
+@Token = pega-aqui-el-access-token
+@RefreshToken = pega-aqui-el-refresh-token
+@UserId = 01a0fd28-eb05-7fba-8260-b2345d93bcec
+
+# Código de autorización: el "code" de la redirectUri que devuelve "Autorizar a Sheepfold".
+# El par PKCE de ejemplo cumple code_challenge = BASE64URL(SHA256(code_verifier)).
+@AuthorizationCode = pega-aqui-el-code
+@CodeVerifier = dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+@CodeChallenge = E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/health
+Accept: application/json
+
+###
+
+# ============================ Discovery ============================
+# Públicos. Las URLs que devuelven salen de Jwt:Issuer, no del host de la petición.
+
+### Documento de discovery de OpenID Connect
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/.well-known/openid-configuration
+Accept: application/json
+
+### Claves públicas de firma (JWKS)
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/.well-known/jwks.json
+Accept: application/json
+
+###
+
+# =============================== Auth ===============================
+
+### Registrarse (público y limitado: sin roles, activo, email sin confirmar)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "ana.perez@example.com",
+  "password": "Clave#Segura2026",
+  "firstName": "Ana",
+  "lastName": "Pérez",
+  "phoneNumber": "+57 300 000 0000"
+}
+
+### Iniciar sesión (audience: la API para la que se emite el token de acceso)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana.perez@example.com",
+  "password": "Clave#Segura2026",
+  "audience": "HobbitCoder.TMTBucaramanga.Identity"
+}
+
+### Renovar la sesión (el refresh token usado queda revocado; audience es opcional)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{RefreshToken}}",
+  "audience": "HobbitCoder.TMTBucaramanga.Sheepfold"
+}
+
+### Autorizar a Sheepfold con mi sesión (devuelve la redirectUri del cliente con code y state)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/authorize
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "clientId": "sheepfold-web",
+  "redirectUri": "http://localhost:4200/auth/callback",
+  "codeChallenge": "{{CodeChallenge}}",
+  "codeChallengeMethod": "S256",
+  "state": "estado-del-cliente"
+}
+
+### Canjear el código por los tokens de Sheepfold (un solo uso, vence en un minuto)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/token
+Content-Type: application/json
+
+{
+  "code": "{{AuthorizationCode}}",
+  "codeVerifier": "{{CodeVerifier}}",
+  "clientId": "sheepfold-web",
+  "redirectUri": "http://localhost:4200/auth/callback"
+}
+
+### Cerrar sesión (en todas las aplicaciones que comparten la sesión)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{RefreshToken}}"
+}
+
+### Mi perfil
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/me
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Actualizar mi perfil
+PUT {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/me
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "firstName": "Ana María",
+  "lastName": "Pérez",
+  "phoneNumber": "+57 300 000 0000"
+}
+
+### Cambiar mi contraseña (cierra todas mis sesiones)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "currentPassword": "Clave#Segura2026",
+  "newPassword": "Nueva#Clave2026"
+}
+
+# =========================== Users (Admin) ===========================
+
+### Listar usuarios (search, isActive, role, pageNumber, pageSize)
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users?search=perez&pageNumber=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Obtener un usuario
+GET {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users/{{UserId}}
+Accept: application/json
+Authorization: Bearer {{Token}}
+
+### Crear un usuario (alta completa)
+POST {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "email": "carlos.rodriguez@example.com",
+  "password": "Clave#Segura2026",
+  "firstName": "Carlos",
+  "lastName": "Rodríguez",
+  "isActive": true,
+  "emailConfirmed": true,
+  "roles": ["Admin"]
+}
+
+### Actualizar un usuario (roles reemplaza los actuales; isActive=false cierra sus sesiones)
+PUT {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users/{{UserId}}
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "id": "{{UserId}}",
+  "email": "carlos.rodriguez@example.com",
+  "firstName": "Carlos",
+  "lastName": "Rodríguez",
+  "isActive": true,
+  "emailConfirmed": true,
+  "roles": []
+}
+
+### Asignar contraseña (desbloquea y cierra sus sesiones)
+PUT {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users/{{UserId}}/password
+Content-Type: application/json
+Authorization: Bearer {{Token}}
+
+{
+  "id": "{{UserId}}",
+  "newPassword": "Asignada#Admin2026"
+}
+
+### Eliminar un usuario (borrado lógico)
+DELETE {{HobbitCoder.TMTBucaramanga.Identity.WebAPI_HostAddress}}/api/users/{{UserId}}
+Authorization: Bearer {{Token}}

@@ -1,0 +1,115 @@
+using HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Common;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+
+namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Infrastructure;
+
+/// <summary>Atajos para llamar a <c>/api/auth</c> y a endpoints protegidos.</summary>
+public static class AuthApi
+{
+    public const string Password = "Clave#Segura2026";
+
+    private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
+
+    public static string NewEmail() => $"usuario-{Guid.NewGuid():N}@tmtbucaramanga.test";
+
+    public static Task<HttpResponseMessage> PostRegisterAsync(this HttpClient client, object body) =>
+        client.PostAsJsonAsync("/api/auth/register", body, CancellationToken);
+
+    public static async Task<Guid> RegisterAsync(this HttpClient client, string email, string password = Password)
+    {
+        using var response = await client.PostRegisterAsync(new { email, password, firstName = "Ana", lastName = "Pérez" });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        return await response.Content.ReadFromJsonAsync<Guid>(CancellationToken);
+    }
+
+    public static Task<HttpResponseMessage> PostLoginAsync(this HttpClient client, string email, string password, string audience = IdentityApiFactory.IdentityAudience) =>
+        client.PostAsJsonAsync("/api/auth/login", new { email, password, audience }, CancellationToken);
+
+    public static async Task<AuthResponse> LoginAsync(this HttpClient client, string email, string password = Password, string audience = IdentityApiFactory.IdentityAudience)
+    {
+        using var response = await client.PostLoginAsync(email, password, audience);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>(CancellationToken))!;
+    }
+
+    public static Task<HttpResponseMessage> PostRefreshAsync(this HttpClient client, string refreshToken, string? audience = null) =>
+        client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken, audience }, CancellationToken);
+
+    public static async Task<AuthResponse> RefreshAsync(this HttpClient client, string refreshToken, string? audience = null)
+    {
+        using var response = await client.PostRefreshAsync(refreshToken, audience);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>(CancellationToken))!;
+    }
+
+    /// <summary>
+    /// Autoriza al cliente de Sheepfold con la sesión del token de Identity y devuelve el código de la
+    /// URI de retorno, comprobando que trae el mismo <c>state</c>.
+    /// </summary>
+    public static async Task<string> AuthorizeSheepfoldAsync(this HttpClient client, string identityAccessToken, PkceChallenge pkce)
+    {
+        const string state = "estado-del-cliente";
+
+        using var response = await client.PostAuthorizeAsync(identityAccessToken, pkce);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var redirectUri = new Uri((await response.ReadAsync<AuthorizeResponse>()).RedirectUri);
+        var query = QueryHelpers.ParseQuery(redirectUri.Query);
+        Assert.Equal(IdentityApiFactory.SheepfoldRedirectUri, redirectUri.GetLeftPart(UriPartial.Path));
+        Assert.Equal(state, query["state"].ToString());
+
+        return query["code"].ToString();
+    }
+
+    public static Task<HttpResponseMessage> PostAuthorizeAsync(
+        this HttpClient client, string? identityAccessToken, PkceChallenge pkce, string redirectUri = IdentityApiFactory.SheepfoldRedirectUri) =>
+        client.SendAsync(HttpMethod.Post, "/api/auth/authorize", identityAccessToken, new
+        {
+            clientId = IdentityApiFactory.SheepfoldClientId,
+            redirectUri,
+            codeChallenge = pkce.CodeChallenge,
+            codeChallengeMethod = "S256",
+            state = "estado-del-cliente"
+        });
+
+    public static Task<HttpResponseMessage> PostTokenAsync(this HttpClient client, string code, string codeVerifier) =>
+        client.PostAsJsonAsync("/api/auth/token", new
+        {
+            code,
+            codeVerifier,
+            clientId = IdentityApiFactory.SheepfoldClientId,
+            redirectUri = IdentityApiFactory.SheepfoldRedirectUri
+        }, CancellationToken);
+
+    /// <summary>Envía una petición con <c>Authorization: Bearer</c>.</summary>
+    public static async Task<HttpResponseMessage> SendAsync(this HttpClient client, HttpMethod method, string uri, string? accessToken, object? body = null)
+    {
+        using var request = new HttpRequestMessage(method, uri);
+
+        if (accessToken is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+
+        if (body is not null)
+        {
+            request.Content = JsonContent.Create(body);
+        }
+
+        return await client.SendAsync(request, CancellationToken);
+    }
+
+    public static async Task<T> ReadAsync<T>(this HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadFromJsonAsync<T>(CancellationToken);
+        Assert.NotNull(content);
+
+        return content;
+    }
+}
