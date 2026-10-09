@@ -13,13 +13,15 @@ public class BootstrapSettings
 }
 
 /// <summary>
-/// Primer administrador. Se crea solo si <see cref="Email"/> está configurado y todavía no hay ningún
-/// usuario con el rol Admin; si ya existe una cuenta con ese email, solo se le asigna el rol.
+/// Primer administrador. Se crea solo si <see cref="UserName"/> está configurado y todavía no hay ninguna
+/// cuenta con el rol Administrador.
 /// </summary>
 public class BootstrapAdminSettings
 {
-    public string? Email { get; set; }
+    public string? UserName { get; set; }
     public string? Password { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Email { get; set; }
     public string FirstName { get; set; } = "Administrador";
     public string LastName { get; set; } = "TMT Bucaramanga";
 }

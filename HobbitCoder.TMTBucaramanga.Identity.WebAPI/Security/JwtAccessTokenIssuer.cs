@@ -1,5 +1,6 @@
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
+using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using HobbitCoder.TMTBucaramanga.Identity.WebAPI.Common.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -66,6 +67,13 @@ public class JwtAccessTokenIssuer : IAccessTokenIssuer
         if (roles.Length > 0)
         {
             claims[RoleClaimType] = roles;
+        }
+
+        var permissions = (request.Permissions ?? []).Where(permission => !string.IsNullOrWhiteSpace(permission)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (permissions.Length > 0)
+        {
+            claims[PermissionNames.ClaimType] = permissions;
         }
 
         var token = TokenHandler.CreateToken(new SecurityTokenDescriptor

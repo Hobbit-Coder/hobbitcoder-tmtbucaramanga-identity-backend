@@ -3,6 +3,7 @@ using HobbitCoder.TMTBucaramanga.Identity.WebAPI;
 using HobbitCoder.TMTBucaramanga.Identity.WebAPI.Handlers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ErrorExceptionHandler>();
 
-builder.Services.AddControllers();
+// Los enums viajan como texto ("Leader", "WhatsApp"): el contrato se lee sin tablas de códigos.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 

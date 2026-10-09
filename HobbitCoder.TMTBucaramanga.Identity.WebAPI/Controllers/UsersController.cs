@@ -11,12 +11,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
 /// <summary>
-/// Administración completa de usuarios. Exige el rol <see cref="RoleNames.Admin"/> y un token emitido
-/// para la audiencia de Identity.
+/// Administración de cuentas (§4.1, §4.5, HU-03). La usan el administrador y el director con un token para
+/// la audiencia de Identity. Las cuentas con rol Administrador solo las administra otro administrador.
+/// Ningún endpoint define contraseñas de terceros.
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = RoleNames.Admin)]
+[Authorize(Roles = RoleNames.AccountManagers)]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status403Forbidden)]
 public class UsersController : ControllerBase
@@ -33,9 +34,16 @@ public class UsersController : ControllerBase
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResult<UserResponse>>> GetUsersAsync([FromQuery] GetUsersQuery query, CancellationToken cancellationToken)
     {
-        var users = await _mediator.Send<GetUsersQuery, PagedResult<UserResponse>>(query, cancellationToken);
+        return Ok(await _mediator.Send<GetUsersQuery, PagedResult<UserResponse>>(query, cancellationToken));
+    }
 
-        return Ok(users);
+    /// <summary>Cuentas retiradas o desactivadas (§26).</summary>
+    [HttpGet("retired")]
+    [ProducesResponseType<PagedResult<UserResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResult<UserResponse>>> GetRetiredUsersAsync([FromQuery] GetRetiredUsersQuery query, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send<GetRetiredUsersQuery, PagedResult<UserResponse>>(query, cancellationToken));
     }
 
     [HttpGet("{id:guid}")]
@@ -43,11 +51,10 @@ public class UsersController : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserResponse>> GetUserByIdAsync([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        var user = await _mediator.Send<GetUserByIdQuery, UserResponse>(new GetUserByIdQuery { Id = id }, cancellationToken);
-
-        return Ok(user);
+        return Ok(await _mediator.Send<GetUserByIdQuery, UserResponse>(new GetUserByIdQuery { Id = id }, cancellationToken));
     }
 
+    /// <summary>Registra la cuenta sin contraseña: su titular la activa en el primer ingreso.</summary>
     [HttpPost]
     [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -76,24 +83,19 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Asigna una contraseña nueva, desbloquea la cuenta y cierra todas sus sesiones.</summary>
-    [HttpPut("{id:guid}/password")]
+    /// <summary>Solicita que el titular cree personalmente una contraseña nueva; cierra sus sesiones.</summary>
+    [HttpPost("{id:guid}/password-reset")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetUserPasswordAsync([FromRoute] Guid id, [FromBody] SetUserPasswordCommand command, CancellationToken cancellationToken)
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RequestPasswordResetAsync([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        if (id != command.Id)
-        {
-            return BadRequest();
-        }
-
-        await _mediator.Send<SetUserPasswordCommand, Unit>(command, cancellationToken);
+        await _mediator.Send<RequestPasswordResetCommand, Unit>(new RequestPasswordResetCommand { Id = id }, cancellationToken);
 
         return NoContent();
     }
 
-    /// <summary>Borrado lógico; cierra todas las sesiones del usuario.</summary>
+    /// <summary>Retiro ordinario (borrado lógico); cierra sus sesiones.</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -101,6 +103,28 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> DeleteUserAsync([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send<DeleteUserCommand, Unit>(new DeleteUserCommand { Id = id }, cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RestoreUserAsync([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send<RestoreUserCommand, Unit>(new RestoreUserCommand { Id = id }, cancellationToken);
+
+        return NoContent();
+    }
+
+    /// <summary>Eliminación definitiva de una cuenta retirada o desactivada.</summary>
+    [HttpDelete("{id:guid}/permanent")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> PermanentlyDeleteUserAsync([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send<PermanentlyDeleteUserCommand, Unit>(new PermanentlyDeleteUserCommand { Id = id }, cancellationToken);
 
         return NoContent();
     }

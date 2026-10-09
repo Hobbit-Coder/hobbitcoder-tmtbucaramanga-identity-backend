@@ -12,10 +12,12 @@ namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Auth;
 /// </summary>
 public class AuthorizationCodeTests : IClassFixture<DatabaseApiFixture>
 {
+    private readonly DatabaseApiFixture _fixture;
     private readonly HttpClient _client;
 
     public AuthorizationCodeTests(DatabaseApiFixture fixture)
     {
+        _fixture = fixture;
         _client = fixture.CreateClient();
     }
 
@@ -24,10 +26,9 @@ public class AuthorizationCodeTests : IClassFixture<DatabaseApiFixture>
     /// <summary>Un usuario con sesión iniciada en Identity (audiencia de Identity).</summary>
     private async Task<AuthResponse> SignInToIdentityAsync()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
 
-        return await _client.LoginAsync(email);
+        return await _client.LoginAsync(account.UserName);
     }
 
     [Fact]

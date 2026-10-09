@@ -10,6 +10,7 @@ public static partial class Configuration
     {
         builder.AddCorsSettings();
         builder.AddJwtSettings();
+        builder.AddSecurityMessaging();
         builder.AddAdminBootstrap();
 
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();

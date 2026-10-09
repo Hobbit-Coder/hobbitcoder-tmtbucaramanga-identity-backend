@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.WebUtilities;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Infrastructure;
 
@@ -13,25 +15,22 @@ public static class AuthApi
 
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
+    /// <summary>Opciones JSON de la API: enums como texto.</summary>
+    public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
     public static string NewEmail() => $"usuario-{Guid.NewGuid():N}@tmtbucaramanga.test";
 
-    public static Task<HttpResponseMessage> PostRegisterAsync(this HttpClient client, object body) =>
-        client.PostAsJsonAsync("/api/auth/register", body, CancellationToken);
+    public static string NewUserName() => $"usuario.{Guid.NewGuid():N}"[..30];
 
-    public static async Task<Guid> RegisterAsync(this HttpClient client, string email, string password = Password)
+    /// <summary>Celular colombiano único (+57 3xx xxx xxxx) para las pruebas.</summary>
+    public static string NewPhoneNumber() => $"+573{Random.Shared.NextInt64(100_000_000, 999_999_999)}";
+
+    public static Task<HttpResponseMessage> PostLoginAsync(this HttpClient client, string identifier, string password, string audience = IdentityApiFactory.IdentityAudience) =>
+        client.PostAsJsonAsync("/api/auth/login", new { identifier, password, audience }, CancellationToken);
+
+    public static async Task<AuthResponse> LoginAsync(this HttpClient client, string identifier, string password = Password, string audience = IdentityApiFactory.IdentityAudience)
     {
-        using var response = await client.PostRegisterAsync(new { email, password, firstName = "Ana", lastName = "Pérez" });
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
-        return await response.Content.ReadFromJsonAsync<Guid>(CancellationToken);
-    }
-
-    public static Task<HttpResponseMessage> PostLoginAsync(this HttpClient client, string email, string password, string audience = IdentityApiFactory.IdentityAudience) =>
-        client.PostAsJsonAsync("/api/auth/login", new { email, password, audience }, CancellationToken);
-
-    public static async Task<AuthResponse> LoginAsync(this HttpClient client, string email, string password = Password, string audience = IdentityApiFactory.IdentityAudience)
-    {
-        using var response = await client.PostLoginAsync(email, password, audience);
+        using var response = await client.PostLoginAsync(identifier, password, audience);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         return (await response.Content.ReadFromJsonAsync<AuthResponse>(CancellationToken))!;
@@ -107,9 +106,12 @@ public static class AuthApi
 
     public static async Task<T> ReadAsync<T>(this HttpResponseMessage response)
     {
-        var content = await response.Content.ReadFromJsonAsync<T>(CancellationToken);
+        var content = await response.Content.ReadFromJsonAsync<T>(JsonOptions, CancellationToken);
         Assert.NotNull(content);
 
         return content;
     }
 }
+
+/// <summary>Página de resultados tal como la serializa la API (<c>PagedResult</c>).</summary>
+public sealed record Page<T>(List<T> Items, int PageNumber, int PageSize, int TotalCount, int TotalPages);

@@ -27,6 +27,7 @@ public class JwtSettingsValidator : IValidateOptions<JwtSettings>
         ValidateIssuer(options.Issuer, failures);
         ValidateAudiences(options.Audiences, failures);
         ValidateClients(options, failures);
+        ValidateServiceClients(options.ServiceClients, failures);
 
         if (options.AccessTokenLifetimeMinutes <= 0)
         {
@@ -41,6 +42,29 @@ public class JwtSettingsValidator : IValidateOptions<JwtSettings>
         ValidateSigningKeys(options, failures);
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
+    }
+
+    /// <summary>Cada cliente de servicio necesita un id único y un secreto largo (no se adivina por fuerza bruta).</summary>
+    private static void ValidateServiceClients(List<ServiceClientSettings> serviceClients, List<string> failures)
+    {
+        const int minSecretLength = 32;
+
+        foreach (var client in serviceClients)
+        {
+            if (string.IsNullOrWhiteSpace(client.ClientId))
+            {
+                failures.Add($"{Section}:ServiceClients: cada cliente necesita ClientId.");
+            }
+            else if (client.Secret.Length < minSecretLength)
+            {
+                failures.Add($"{Section}:ServiceClients '{client.ClientId}': Secret debe tener al menos {minSecretLength} caracteres.");
+            }
+        }
+
+        if (serviceClients.GroupBy(client => client.ClientId, StringComparer.Ordinal).Any(group => group.Count() > 1))
+        {
+            failures.Add($"{Section}:ServiceClients tiene ClientId repetidos.");
+        }
     }
 
     /// <summary>

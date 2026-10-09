@@ -1,5 +1,7 @@
-using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Utils;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
+using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
+using HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Contexts;
 using HobbitCoder.TMTBucaramanga.Identity.WebAPI.Common.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,18 +10,14 @@ using Microsoft.Extensions.Options;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Services;
 
 /// <summary>
-/// Al arrancar, crea el rol <see cref="RoleNames.Admin"/> y el primer administrador configurado en
-/// <see cref="BootstrapSettings"/>. Es idempotente: si ya hay algún administrador no hace nada, así que
-/// la configuración puede quedarse puesta. Sin <c>Bootstrap:Admin:Email</c> no toca la base de datos.
+/// Al arrancar, crea el primer administrador configurado en <see cref="BootstrapSettings"/> si todavía no
+/// existe ninguno. Es la única cuenta que nace activada y con contraseña: una base nueva no tiene a nadie
+/// que registre cuentas. Es idempotente; sin <c>Bootstrap:Admin:UserName</c> no toca la base de datos.
 /// </summary>
 /// <remarks>
-/// Si falla (base de datos inaccesible, contraseña que no cumple la política) la aplicación no arranca:
-/// se pidió un administrador explícitamente y no tenerlo dejaría <c>/api/users</c> inutilizable.
-/// <para>
-/// Varias instancias pueden arrancar a la vez y competir por crear el rol, el usuario o la asignación.
-/// Ante un fallo se comprueba con un scope nuevo si otra instancia ya dejó un administrador; si no, se
-/// espera un poco y se repite el proceso, que salta los pasos ya hechos.
-/// </para>
+/// Si falla (base de datos inaccesible, datos o contraseña inválidos) la aplicación no arranca: se pidió un
+/// administrador explícitamente y no tenerlo dejaría la administración de cuentas inutilizable. Varias
+/// instancias pueden arrancar a la vez: ante un fallo se comprueba si otra ya lo creó y se reintenta.
 /// </remarks>
 public class AdminBootstrapper : IHostedService
 {
@@ -39,7 +37,7 @@ public class AdminBootstrapper : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Email))
+        if (string.IsNullOrWhiteSpace(_settings.UserName))
         {
             return;
         }
@@ -48,12 +46,12 @@ public class AdminBootstrapper : IHostedService
         {
             try
             {
-                await EnsureAdminAsync(_settings.Email);
+                await EnsureAdminAsync(cancellationToken);
                 return;
             }
             catch (Exception exception) when (exception is DbUpdateException or InvalidOperationException)
             {
-                if (await AdminExistsAsync())
+                if (await AdminExistsAsync(cancellationToken))
                 {
                     _logger.LogInformation(exception, "Bootstrap: otra instancia creó el administrador al mismo tiempo.");
                     return;
@@ -72,66 +70,53 @@ public class AdminBootstrapper : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private async Task<bool> AdminExistsAsync()
+    private async Task<bool> AdminExistsAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IdentityContext>();
 
-        return (await userManager.GetUsersInRoleAsync(RoleNames.Admin)).Count > 0;
+        return await dbContext.Users.IgnoreQueryFilters().AnyAsync(user => user.Role == UserRole.Admin, cancellationToken);
     }
 
-    private async Task EnsureAdminAsync(string email)
+    private async Task EnsureAdminAsync(CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Role>>();
-
-        if ((await userManager.GetUsersInRoleAsync(RoleNames.Admin)).Count > 0)
+        if (await AdminExistsAsync(cancellationToken))
         {
             return;
         }
 
-        if (!await roleManager.RoleExistsAsync(RoleNames.Admin))
-        {
-            EnsureSucceeded(await roleManager.CreateAsync(new Role { Name = RoleNames.Admin }), $"crear el rol {RoleNames.Admin}");
-        }
+        var phoneNumber = PhoneNumbers.Normalize(_settings.PhoneNumber)
+            ?? throw new InvalidOperationException($"{BootstrapSettings.SectionName}:Admin:PhoneNumber es obligatorio y debe ser un teléfono válido.");
 
-        var admin = await userManager.FindByEmailAsync(email) ?? await CreateAdminAsync(userManager, email);
-
-        EnsureSucceeded(await userManager.AddToRoleAsync(admin, RoleNames.Admin), $"asignar el rol {RoleNames.Admin}");
-        _logger.LogInformation("Bootstrap: el usuario {UserId} es ahora administrador.", admin.Id);
-    }
-
-    private async Task<User> CreateAdminAsync(UserManager<User> userManager, string email)
-    {
         if (string.IsNullOrWhiteSpace(_settings.Password))
         {
-            throw new InvalidOperationException(
-                $"{BootstrapSettings.SectionName}:Admin:Password es obligatorio para crear el administrador {email}.");
+            throw new InvalidOperationException($"{BootstrapSettings.SectionName}:Admin:Password es obligatorio para crear el administrador.");
         }
 
+        using var scope = _scopeFactory.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
         var admin = new User
         {
             Id = Guid.CreateVersion7(),
-            UserName = email,
-            Email = email,
-            EmailConfirmed = true,
+            UserName = _settings.UserName,
+            PhoneNumber = phoneNumber,
+            Email = string.IsNullOrWhiteSpace(_settings.Email) ? null : _settings.Email,
+            EmailConfirmed = !string.IsNullOrWhiteSpace(_settings.Email),
             FirstName = _settings.FirstName,
             LastName = _settings.LastName,
-            IsActive = true
+            Role = UserRole.Admin,
+            IsActive = true,
+            ActivatedAt = DateTime.UtcNow
         };
 
-        EnsureSucceeded(await userManager.CreateAsync(admin, _settings.Password), $"crear el administrador {email}");
+        var result = await userManager.CreateAsync(admin, _settings.Password);
 
-        return admin;
-    }
-
-    private static void EnsureSucceeded(IdentityResult result, string action)
-    {
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
-                $"Bootstrap: no se pudo {action}: {string.Join(" ", result.Errors.Select(error => error.Description))}");
+                $"Bootstrap: no se pudo crear el administrador: {string.Join(" ", result.Errors.Select(error => error.Description))}");
         }
+
+        _logger.LogInformation("Bootstrap: se creó el administrador {UserId}.", admin.Id);
     }
 }

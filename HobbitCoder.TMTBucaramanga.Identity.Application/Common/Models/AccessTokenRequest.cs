@@ -11,4 +11,10 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
 /// Sesión de Identity que emitió el token (claim <c>sid</c>, el <c>FamilyId</c> de sus refresh tokens).
 /// Todos los tokens de una sesión lo llevan; Identity lo usa para unir otras aplicaciones a esa sesión.
 /// </param>
-public sealed record AccessTokenRequest(string Subject, string Audience, IReadOnlyCollection<string> Roles, string? SessionId = null);
+/// <param name="Permissions">Capacidades puntuales (claim <c>permission</c>), por ejemplo registrar asistentes.</param>
+public sealed record AccessTokenRequest(
+    string Subject,
+    string Audience,
+    IReadOnlyCollection<string> Roles,
+    string? SessionId = null,
+    IReadOnlyCollection<string>? Permissions = null);

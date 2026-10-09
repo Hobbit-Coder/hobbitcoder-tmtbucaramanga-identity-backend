@@ -1,10 +1,9 @@
 using FluentValidation;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Exceptions;
-using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Extensions;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Utils;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
-using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
@@ -15,42 +14,49 @@ using Microsoft.EntityFrameworkCore;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Commands;
 
 /// <summary>
-/// Actualización completa de un usuario por un administrador. <see cref="Roles"/> reemplaza los roles
-/// actuales. Desactivar al usuario cierra todas sus sesiones.
+/// La administración actualiza una cuenta: datos del perfil, rol, estado y designación para registrar
+/// asistentes. Nunca la contraseña (§6). Desactivar cierra todas las sesiones de la cuenta.
 /// </summary>
 /// <remarks>
-/// Los tokens de acceso ya emitidos conservan los roles anteriores hasta su <c>exp</c>; el siguiente
-/// refresh ya trae los nuevos.
+/// Los tokens de acceso ya emitidos conservan el rol anterior hasta su <c>exp</c>; el siguiente refresh ya
+/// trae el nuevo.
 /// </remarks>
 public class UpdateUserCommand : IRequest
 {
     public required Guid Id { get; set; }
-    public required string Email { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
-    public string? PhoneNumber { get; set; }
+    public Gender? Gender { get; set; }
+    public required string PhoneNumber { get; set; }
+    public string? Email { get; set; }
+    public required string UserName { get; set; }
+    public string? Instagram { get; set; }
+    public DateOnly? BirthDate { get; set; }
+    public required UserRole Role { get; set; }
     public required bool IsActive { get; set; }
-    public required bool EmailConfirmed { get; set; }
-    public List<string> Roles { get; set; } = [];
+    public bool CanRegisterAttendees { get; set; }
 }
 
 public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Unit>
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly UserManager<User> _userManager;
+    private readonly ILookupNormalizer _normalizer;
     private readonly AuthSessionService _authSessionService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly TimeProvider _timeProvider;
 
     public UpdateUserCommandHandler(
         IApplicationDbContext dbContext,
-        UserManager<User> userManager,
+        ILookupNormalizer normalizer,
         AuthSessionService authSessionService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        TimeProvider timeProvider)
     {
         _dbContext = dbContext;
-        _userManager = userManager;
+        _normalizer = normalizer;
         _authSessionService = authSessionService;
         _currentUserService = currentUserService;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Unit> Handle(UpdateUserCommand request, CancellationToken cancellationToken = default)
@@ -58,39 +64,40 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Unit>
         var user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(User), request.Id);
 
-        var requestedRoles = request.Roles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        EnsureAdminDoesNotLockThemselvesOut(request, requestedRoles);
+        _currentUserService.EnsureCanManageRole(user.Role);
+        _currentUserService.EnsureCanManageRole(request.Role);
 
-        if (await _dbContext.IsEmailTakenAsync(_userManager.NormalizeEmail(request.Email), user.Id, cancellationToken))
+        if (user.Role != request.Role || !request.IsActive)
         {
-            throw new ConflictException($"The email '{request.Email}' is already registered.");
+            _currentUserService.EnsureNotSelf(user, "deactivate or change the role of");
         }
 
+        var phoneNumber = PhoneNumbers.Normalize(request.PhoneNumber)!;
+        var email = request.Email.EmptyAsNull();
+        await _dbContext.EnsureIdentifiersAvailableAsync(_normalizer, request.UserName, phoneNumber, email, user.Id, cancellationToken);
+
+        var before = AccountAudit.Snapshot(user);
         var wasActive = user.IsActive;
 
-        user.UserName = request.Email;
-        user.Email = request.Email;
-        user.FirstName = request.FirstName;
-        user.LastName = request.LastName;
-        user.PhoneNumber = request.PhoneNumber;
+        user.FirstName = request.FirstName.Trim();
+        user.LastName = request.LastName.Trim();
+        user.Gender = request.Gender;
+        user.Instagram = request.Instagram.EmptyAsNull();
+        user.BirthDate = request.BirthDate;
+        user.Role = request.Role;
         user.IsActive = request.IsActive;
-        user.EmailConfirmed = request.EmailConfirmed;
+        user.CanRegisterAttendees = request.CanRegisterAttendees;
+        user.SetIdentifiers(_normalizer, request.UserName, phoneNumber, email);
 
-        (await _userManager.UpdateAsync(user)).ThrowIfFailed();
-
-        var currentRoles = await _userManager.GetRolesAsync(user);
-        var rolesToRemove = currentRoles.Except(requestedRoles, StringComparer.OrdinalIgnoreCase).ToList();
-        var rolesToAdd = requestedRoles.Except(currentRoles, StringComparer.OrdinalIgnoreCase).ToList();
-
-        if (rolesToRemove.Count > 0)
+        var action = (wasActive, user.IsActive) switch
         {
-            (await _userManager.RemoveFromRolesAsync(user, rolesToRemove)).ThrowIfFailed();
-        }
+            (true, false) => AccountAuditAction.Deactivated,
+            (false, true) => AccountAuditAction.Activated,
+            _ => AccountAuditAction.Updated
+        };
 
-        if (rolesToAdd.Count > 0)
-        {
-            (await _userManager.AddToRolesAsync(user, rolesToAdd)).ThrowIfFailed();
-        }
+        _dbContext.Record(_currentUserService, _timeProvider, action, user, before, AccountAudit.Snapshot(user));
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (wasActive && !user.IsActive)
         {
@@ -99,35 +106,22 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Unit>
 
         return Unit.Value;
     }
-
-    /// <summary>Un administrador no puede desactivarse ni quitarse el rol Admin: podría quedar sin administradores.</summary>
-    private void EnsureAdminDoesNotLockThemselvesOut(UpdateUserCommand request, List<string> requestedRoles)
-    {
-        if (request.Id != _currentUserService.GetRequiredUserId())
-        {
-            return;
-        }
-
-        if (!request.IsActive || !requestedRoles.Contains(RoleNames.Admin, StringComparer.OrdinalIgnoreCase))
-        {
-            throw new ConflictException($"You cannot deactivate yourself or remove your own {RoleNames.Admin} role.");
-        }
-    }
 }
 
 public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 {
-    public UpdateUserCommandValidator(IApplicationDbContext dbContext)
+    public UpdateUserCommandValidator(TimeProvider timeProvider)
     {
         RuleFor(command => command.Id).NotEmpty().WithMessage("Id is required");
-        RuleFor(command => command.Email).ValidEmail();
         RuleFor(command => command.FirstName).ValidName("FirstName");
         RuleFor(command => command.LastName).ValidName("LastName");
+        RuleFor(command => command.Gender).IsInEnum().WithMessage("Gender is not valid");
         RuleFor(command => command.PhoneNumber).ValidPhoneNumber();
-
-        RuleForEach(command => command.Roles).NotEmpty().WithMessage("Role name is required");
-        RuleFor(command => command.Roles)
-            .MustAsync(dbContext.RolesExistAsync).WithMessage("One or more roles do not exist")
-            .When(command => command.Roles.TrueForAll(role => !string.IsNullOrWhiteSpace(role)));
+        RuleFor(command => command.Email).OptionalEmail().When(command => !string.IsNullOrWhiteSpace(command.Email));
+        RuleFor(command => command.UserName).ValidUserName();
+        RuleFor(command => command.Instagram).ValidInstagram();
+        RuleFor(command => command.BirthDate)
+            .LessThanOrEqualTo(_ => LocalCalendar.Today(timeProvider)).WithMessage("BirthDate cannot be in the future");
+        RuleFor(command => command.Role).IsInEnum().WithMessage("Role is not valid");
     }
 }

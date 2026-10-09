@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Infrastructure;
@@ -24,6 +26,9 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
 
     public string EnvironmentName { get; init; } = TestingEnvironment;
 
+    /// <summary>Reemplazos de servicios para la prueba (por ejemplo, la pasarela de mensajería).</summary>
+    public Action<IServiceCollection>? ConfigureServices { get; set; }
+
     public Dictionary<string, string?> Settings { get; } = new()
     {
         ["Jwt:Issuer"] = Issuer,
@@ -46,5 +51,10 @@ public class IdentityApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment(EnvironmentName);
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(Settings));
+
+        if (ConfigureServices is not null)
+        {
+            builder.ConfigureTestServices(ConfigureServices);
+        }
     }
 }

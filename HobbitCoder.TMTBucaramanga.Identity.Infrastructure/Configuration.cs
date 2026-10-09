@@ -16,8 +16,9 @@ public static class Configuration
     /// <see cref="IApplicationDbContext"/> se resuelve desde la instancia de <see cref="IdentityContext"/>
     /// registrada por <c>AddDbContext</c>, para que en un mismo scope ambos compartan el ChangeTracker.
     /// <para>
-    /// ASP.NET Core Identity se registra sin cookies ni SignInManager (<c>AddIdentityCore</c>): la
-    /// autenticación de la plataforma es con JWT. El email es también el nombre de usuario.
+    /// ASP.NET Core Identity se registra sin cookies, SignInManager ni roles (<c>AddIdentityCore</c>): la
+    /// autenticación de la plataforma es con JWT y el rol es un atributo de la cuenta. La unicidad del correo
+    /// (opcional) y del teléfono la comprueban los comandos y los índices únicos de la base.
     /// </para>
     /// </remarks>
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder)
@@ -27,7 +28,8 @@ public static class Configuration
 
         builder.Services.AddIdentityCore<User>(options =>
             {
-                options.User.RequireUniqueEmail = true;
+                // RequireUniqueEmail exigiría correo a todas las cuentas; en TMT es opcional (§5).
+                options.User.RequireUniqueEmail = false;
 
                 options.Password.RequiredLength = 8;
 
@@ -35,7 +37,6 @@ public static class Configuration
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
-            .AddRoles<Role>()
             .AddEntityFrameworkStores<IdentityContext>();
 
         return builder;

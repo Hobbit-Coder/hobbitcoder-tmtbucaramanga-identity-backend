@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
 /// <summary>
-/// Registro, inicio y cierre de sesión, renovación de tokens y la cuenta del usuario autenticado.
+/// Inicio y cierre de sesión, renovación de tokens y la cuenta del usuario autenticado.
 /// Los endpoints de la cuenta (<c>me</c>, <c>change-password</c>) exigen un token emitido para la
 /// audiencia de Identity.
 /// </summary>
@@ -25,19 +25,6 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>Registro público limitado: usuario activo, sin roles y con el email sin confirmar.</summary>
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<Guid>> RegisterAsync([FromBody] RegisterCommand command, CancellationToken cancellationToken)
-    {
-        var id = await _mediator.Send<RegisterCommand, Guid>(command, cancellationToken);
-
-        return CreatedAtAction("GetCurrentUser", null, id);
-    }
-
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
@@ -48,6 +35,20 @@ public class AuthController : ControllerBase
         var response = await _mediator.Send<LoginCommand, AuthResponse>(command, cancellationToken);
 
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Token para una aplicación de servidor (client credentials), por ejemplo la API de Sheepfold cuando
+    /// consulta el directorio de cuentas.
+    /// </summary>
+    [HttpPost("service-token")]
+    [AllowAnonymous]
+    [ProducesResponseType<ServiceTokenResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ServiceTokenResponse>> IssueServiceTokenAsync([FromBody] IssueServiceTokenCommand command, CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send<IssueServiceTokenCommand, ServiceTokenResponse>(command, cancellationToken));
     }
 
     /// <summary>Cambia un refresh token por un par nuevo; el usado queda revocado.</summary>

@@ -7,28 +7,37 @@ using System.Linq.Expressions;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Contexts;
 
-public class IdentityContext : IdentityDbContext<User, Role, Guid>, IApplicationDbContext
+/// <remarks>
+/// <see cref="IdentityUserContext{TUser, TKey}"/> sin tablas de roles: cada cuenta tiene un único rol, que es un
+/// atributo de <see cref="User"/> (una tabla de asociación con una sola fila por usuario sería una relación 1:1).
+/// </remarks>
+public class IdentityContext : IdentityUserContext<User, Guid>, IApplicationDbContext
 {
     private const int AuditUserMaxLength = 256;
 
     public DbSet<AuthorizationCode> AuthorizationCodes { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<VerificationRequest> VerificationRequests { get; set; }
+    public DbSet<AccountAuditEntry> AccountAuditEntries { get; set; }
 
     public IdentityContext(DbContextOptions<IdentityContext> options) : base(options)
     {
         AuthorizationCodes = Set<AuthorizationCode>();
         RefreshTokens = Set<RefreshToken>();
+        VerificationRequests = Set<VerificationRequest>();
+        AccountAuditEntries = Set<AccountAuditEntry>();
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // Primero el modelo de ASP.NET Core Identity, para que las configuraciones propias lo ajusten.
+        base.OnModelCreating(builder);
+
         builder.HasDefaultSchema(PersistenceConstants.Schema);
         builder.ApplyConfigurationsFromAssembly(typeof(IdentityContext).Assembly);
 
         ApplyAuditableConventions(builder);
         ApplySoftDeleteQueryFilters(builder);
-
-        base.OnModelCreating(builder);
     }
 
     private static void ApplyAuditableConventions(ModelBuilder modelBuilder)

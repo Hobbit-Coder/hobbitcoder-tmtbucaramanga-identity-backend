@@ -2,32 +2,29 @@ using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
-using Microsoft.AspNetCore.Identity;
+using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Common;
 
 /// <summary>
-/// Emite el par de tokens de una sesión y revoca sesiones. Los roles se leen en cada emisión, así que
-/// un cambio de roles se refleja en el siguiente refresh.
+/// Emite el par de tokens de una sesión y revoca sesiones. El rol y los permisos se leen en cada emisión,
+/// así que un cambio se refleja en el siguiente refresh.
 /// </summary>
 public sealed class AuthSessionService
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly UserManager<User> _userManager;
     private readonly IAccessTokenIssuer _accessTokenIssuer;
     private readonly IRefreshTokenGenerator _refreshTokenGenerator;
     private readonly TimeProvider _timeProvider;
 
     public AuthSessionService(
         IApplicationDbContext dbContext,
-        UserManager<User> userManager,
         IAccessTokenIssuer accessTokenIssuer,
         IRefreshTokenGenerator refreshTokenGenerator,
         TimeProvider timeProvider)
     {
         _dbContext = dbContext;
-        _userManager = userManager;
         _accessTokenIssuer = accessTokenIssuer;
         _refreshTokenGenerator = refreshTokenGenerator;
         _timeProvider = timeProvider;
@@ -92,8 +89,10 @@ public sealed class AuthSessionService
     private async Task<AuthResponse> IssueAsync(
         User user, string audience, string sessionAudience, Guid familyId, RefreshToken? replacedToken, CancellationToken cancellationToken)
     {
-        var roles = await _userManager.GetRolesAsync(user);
-        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest(user.Id.ToString(), audience, [.. roles], familyId.ToString()));
+        // El rol se lee en cada emisión: un cambio llega en el siguiente refresh.
+        var permissions = user.CanRegisterAttendees ? new[] { PermissionNames.RegisterAttendees } : [];
+        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest(
+            user.Id.ToString(), audience, [user.Role.ToString()], familyId.ToString(), permissions));
 
         var now = _timeProvider.GetUtcNow();
         var generated = _refreshTokenGenerator.Generate();
@@ -112,7 +111,6 @@ public sealed class AuthSessionService
         if (replacedToken is not null)
         {
             replacedToken.Revoke(now.UtcDateTime, RefreshTokenRevocationReason.Rotated);
-            replacedToken.ReplacedByTokenId = refreshToken.Id;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

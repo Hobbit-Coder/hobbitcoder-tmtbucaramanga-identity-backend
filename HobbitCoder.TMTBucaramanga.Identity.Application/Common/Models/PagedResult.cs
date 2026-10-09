@@ -21,4 +21,8 @@ public sealed class PagedResult<TObject>
         TotalCount = count;
         Items = items;
     }
+
+    /// <summary>La misma página con cada elemento transformado.</summary>
+    public PagedResult<TResult> Select<TResult>(Func<TObject, TResult> selector) =>
+        new(Items.Select(selector).ToList(), TotalCount, PageNumber, PageSize);
 }

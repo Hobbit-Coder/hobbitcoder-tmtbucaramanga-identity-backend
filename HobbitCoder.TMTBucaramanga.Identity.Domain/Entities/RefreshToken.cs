@@ -9,7 +9,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 /// </summary>
 /// <remarks>
 /// Cada uso lo rota: el token usado queda revocado (<see cref="RefreshTokenRevocationReason.Rotated"/>)
-/// y apunta a su reemplazo. Todos los tokens rotados desde un mismo inicio de sesión comparten
+/// y se emite otro en la misma familia. Todos los tokens rotados desde un mismo inicio de sesión comparten
 /// <see cref="FamilyId"/>; si se presenta un token ya rotado se revoca toda la familia, porque significa
 /// que alguien más tiene una copia.
 /// </remarks>
@@ -31,9 +31,6 @@ public class RefreshToken : BaseEntity
 
     public DateTime? RevokedAt { get; set; }
     public RefreshTokenRevocationReason? RevocationReason { get; set; }
-
-    /// <summary>Token que lo reemplazó al rotarlo.</summary>
-    public Guid? ReplacedByTokenId { get; set; }
 
     public virtual User User { get; set; } = null!;
 

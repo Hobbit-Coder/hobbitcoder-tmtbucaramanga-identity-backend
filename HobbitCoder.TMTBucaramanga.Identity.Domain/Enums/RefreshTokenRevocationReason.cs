@@ -13,6 +13,9 @@ public enum RefreshTokenRevocationReason
 
     PasswordChanged = 4,
 
-    /// <summary>Un administrador desactivó o eliminó al usuario.</summary>
-    UserDisabled = 5
+    /// <summary>La administración desactivó o eliminó al usuario.</summary>
+    UserDisabled = 5,
+
+    /// <summary>La administración pidió que el usuario vuelva a crear su contraseña.</summary>
+    PasswordResetRequested = 6
 }

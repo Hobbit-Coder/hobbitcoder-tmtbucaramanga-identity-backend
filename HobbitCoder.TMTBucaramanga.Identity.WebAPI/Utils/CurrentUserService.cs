@@ -23,4 +23,6 @@ public class CurrentUserService : ICurrentUserService
     /// <remarks>El mapeo de <c>MapInboundClaims</c> no incluye <c>sid</c>: llega con su nombre original.</remarks>
     public string? SessionId =>
         _httpContextAccessor.HttpContext?.User?.FindFirstValue(JwtRegisteredClaimNames.Sid);
+
+    public bool IsInRole(string role) => _httpContextAccessor.HttpContext?.User?.IsInRole(role) == true;
 }

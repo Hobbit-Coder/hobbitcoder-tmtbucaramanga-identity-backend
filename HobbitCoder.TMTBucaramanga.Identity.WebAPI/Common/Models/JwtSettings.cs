@@ -23,6 +23,12 @@ public class JwtSettings
     /// </summary>
     public List<ClientSettings> Clients { get; set; } = [];
 
+    /// <summary>
+    /// Aplicaciones de servidor que piden tokens con credenciales propias (client credentials) para
+    /// consultar el directorio de cuentas. El secreto nunca va en <c>appsettings*.json</c>.
+    /// </summary>
+    public List<ServiceClientSettings> ServiceClients { get; set; } = [];
+
     public int AccessTokenLifetimeMinutes { get; set; } = 60;
 
     /// <summary>
@@ -55,6 +61,15 @@ public class ClientSettings
 
     /// <summary>URIs exactas de retorno: absolutas, sin query ni fragmento y con <c>https</c> fuera de desarrollo.</summary>
     public List<string> RedirectUris { get; set; } = [];
+}
+
+/// <summary>Aplicación de servidor registrada (por ejemplo, <c>sheepfold-api</c>).</summary>
+public class ServiceClientSettings
+{
+    public string ClientId { get; set; } = string.Empty;
+
+    /// <summary>Secreto compartido de al menos 32 caracteres, por variable de entorno o user-secrets.</summary>
+    public string Secret { get; set; } = string.Empty;
 }
 
 /// <summary>

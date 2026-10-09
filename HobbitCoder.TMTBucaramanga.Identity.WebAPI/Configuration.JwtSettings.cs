@@ -36,6 +36,7 @@ public static partial class Configuration
         builder.Services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         builder.Services.AddSingleton<IAuthorizationCodeGenerator, AuthorizationCodeGenerator>();
         builder.Services.AddSingleton<IClientRegistry, ConfiguredClientRegistry>();
+        builder.Services.AddSingleton<IServiceClientRegistry, ConfiguredServiceClientRegistry>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();

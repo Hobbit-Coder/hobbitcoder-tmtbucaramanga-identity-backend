@@ -4,8 +4,8 @@ Servicio de identidad de la plataforma TMT Bucaramanga: gestiona los usuarios y 
 único que tiene claves para firmarlos: las APIs consumidoras (la primera es **HobbitCoder.TMTBucaramanga.Sheepfold**)
 solo los validan con la clave pública que descargan del documento de discovery de Identity.
 
-Todo lo de identidad vive aquí y en su frontend (**hobbitcoder-tmtbucaramanga-identity**): inicio de sesión, registro,
-cuenta y usuarios. Las aplicaciones de negocio, como Sheepfold, no piden credenciales: envían al usuario al frontend de
+Todo lo de identidad vive aquí y en su frontend (**hobbitcoder-tmtbucaramanga-identity**): inicio de sesión, primer
+ingreso, recuperación del acceso, perfil y administración de cuentas. Las aplicaciones de negocio, como Sheepfold, no piden credenciales: envían al usuario al frontend de
 Identity y reciben un código de autorización que cambian por tokens (OAuth 2.0 con PKCE). Ver
 [Inicio de sesión de las aplicaciones](#inicio-de-sesión-de-las-aplicaciones).
 
@@ -23,8 +23,10 @@ Identity y reciben un código de autorización que cambian por tokens (OAuth 2.0
 | `Jwt:SigningKey:Pem` / `PemPath` | Clave RSA privada (PEM) que firma los tokens, o la ruta a su archivo. Uno de los dos, no ambos. |
 | `Jwt:SigningKey:KeyId` | Opcional. `kid` de la clave; por defecto, su thumbprint (RFC 7638). |
 | `Jwt:PreviousSigningKeys` | Claves de rotaciones anteriores que se siguen publicando en el JWKS. Ver [Rotación de claves](#rotación-de-claves). |
-| `Bootstrap:Admin:Email` / `Password` | Primer administrador. Ver [Primer administrador](#primer-administrador). |
-| `Bootstrap:Admin:FirstName` / `LastName` | Opcionales. Nombre del primer administrador. |
+| `Jwt:ServiceClients` | Aplicaciones de servidor que consultan el directorio (`ClientId`, `Secret` de 32+ caracteres). Ver [Directorio](#directorio-para-sheepfold). |
+| `Bootstrap:Admin:UserName` / `PhoneNumber` / `Password` | Administrador que se crea al arrancar si no hay ninguno (user-secrets o variables de entorno, nunca `appsettings`). Ver [Primer administrador](#primer-administrador). |
+| `Verification:CodeLength` / `LifetimeMinutes` / `MaxAttempts` | Política de los códigos de seguridad. Por defecto `6`, `15` y `5`: el requerimiento no los fija (contrato pendiente). |
+| `Messaging:GatewayUrl` / `ApiKey` / `TimeoutSeconds` | Pasarela de SMS/WhatsApp. Ver [Mensajes de seguridad](#mensajes-de-seguridad-sms--whatsapp). |
 | `CorsSettings:*` | Política CORS por ambiente, en los `appsettings`. Ver [CORS](#cors). |
 
 Como variable de entorno, `:` se escribe `__` (`Jwt__Issuer`, `Jwt__SigningKey__Pem`, `Jwt__Audiences__0`, ...).
@@ -109,19 +111,35 @@ usa `CorsSettings__AllowedOrigins__0`.
 
 ### Primer administrador
 
-`/api/users` exige el rol `Admin`, y una base de datos nueva no tiene usuarios. Al arrancar, si
-`Bootstrap:Admin:Email` está configurado y **no existe ningún administrador**, Identity crea el rol `Admin` y el
-usuario (activo y con el email confirmado), o le asigna el rol si ya existía una cuenta con ese email:
+Las cuentas las registra la administración y una base de datos nueva no tiene a nadie.
 
-```powershell
-dotnet user-secrets set 'Bootstrap:Admin:Email' 'admin@tmtbucaramanga.com' --project $project
-dotnet user-secrets set 'Bootstrap:Admin:Password' '<contraseña-segura>' --project $project
+- **Desarrollo: `Bootstrap:Admin`.** Al arrancar, `AdminBootstrapper` crea el administrador ya activado si
+  `Bootstrap:Admin:UserName` está configurado y todavía no hay ninguna cuenta `Admin`; es idempotente. Los datos
+  van en user-secrets, nunca en `appsettings*.json`:
+
+  ```powershell
+  $project = 'HobbitCoder.TMTBucaramanga.Identity.WebAPI'
+  dotnet user-secrets set 'Bootstrap:Admin:UserName' 'admin' --project $project
+  dotnet user-secrets set 'Bootstrap:Admin:PhoneNumber' '+570000000000' --project $project
+  dotnet user-secrets set 'Bootstrap:Admin:Password' '<contraseña de prueba>' --project $project
+  ```
+
+  Las pruebas de integración usan el mismo mecanismo con su propia configuración (`DatabaseApiFixture`).
+- **Producción: primer administrador sin contraseñas en la configuración.** Se inserta una cuenta `Admin`
+  **pendiente de activación** con el teléfono real de su titular, y esa persona la activa en "Es mi primer
+  ingreso" con el código de seguridad (requiere la pasarela de mensajería). El teléfono va normalizado
+  (`+57` y 10 dígitos). Solo inserta si todavía no hay ningún administrador:
+
+```sql
+-- psql -v usuario=admin.tmt -v telefono=+573001234567 -v nombres='Nombre' -v apellidos='Apellido' -f primer-admin.sql
+INSERT INTO "Identity"."AspNetUsers"
+    ("Id", "FirstName", "LastName", "IsActive", "IsDeleted", "CreatedBy", "CreatedDate", "UserName", "NormalizedUserName",
+     "EmailConfirmed", "SecurityStamp", "ConcurrencyStamp", "PhoneNumber", "PhoneNumberConfirmed", "TwoFactorEnabled",
+     "LockoutEnabled", "AccessFailedCount", "CanRegisterAttendees", "Role")
+SELECT gen_random_uuid(), :'nombres', :'apellidos', TRUE, FALSE, 'manual:primer-administrador', now(), :'usuario', upper(:'usuario'),
+       FALSE, replace(gen_random_uuid()::text, '-', ''), gen_random_uuid()::text, :'telefono', FALSE, FALSE, TRUE, 0, FALSE, 'Admin'
+WHERE NOT EXISTS (SELECT 1 FROM "Identity"."AspNetUsers" WHERE "Role" = 'Admin');
 ```
-
-En los demás ambientes: `Bootstrap__Admin__Email` y `Bootstrap__Admin__Password`. Es idempotente (si ya hay un
-administrador no hace nada), así que la configuración puede quedarse; aun así, conviene quitar la contraseña una vez
-creado el usuario. Si no puede crearlo (base de datos inaccesible, contraseña que no cumple la política), la aplicación
-no arranca. Varias instancias pueden arrancar a la vez: solo se crea un administrador.
 
 ### Junto con Sheepfold y los frontends
 
@@ -134,26 +152,61 @@ Cada proyecto tiene sus propios puertos, user-secrets y base de datos, así que 
 | HobbitCoder.TMTBucaramanga.Sheepfold | `https://localhost:7291` / `http://localhost:5280` | `TmtBucaramangaSheepfold` |
 | hobbitcoder-tmtbucaramanga-sheepfold (frontend) | `http://localhost:4200` (`ng serve`, reenvía `/api` a Sheepfold) | — |
 
-Al abrir Sheepfold sin sesión, el navegador va al frontend de Identity para iniciar sesión o registrarse y vuelve a
+Al abrir Sheepfold sin sesión, el navegador va al frontend de Identity para iniciar sesión y vuelve a
 Sheepfold con un código de autorización. `appsettings.Development.json` ya registra a Sheepfold como cliente.
 
 Arranca Identity con el perfil `https`: su issuer de desarrollo es `https://localhost:7101`, que es el `Authority` de
 Sheepfold. El certificado de desarrollo debe ser de confianza (`dotnet dev-certs https --trust`). Antes de la primera
 ejecución, crea la base con `dotnet ef database update` (ver [Migraciones](#migraciones)).
 
+## Cuentas, roles e identificadores
+
+Cada cuenta tiene **un rol** (§3.1): `Admin`, `Director`, `Coordinator`, `Leader` o `Apprentice`, guardado en la
+propia cuenta (no hay tablas de roles). Se emite en el claim `role`; si la cuenta está designada para registrar
+asistentes (§7) el token lleva además `permission: RegisterAttendees`.
+
+Se ingresa con **teléfono, nombre de usuario o correo** (si se registró). El teléfono se guarda normalizado
+(`+573001234567`; un número de 10 dígitos se completa con `+57`). Los tres identificadores son únicos, también frente
+a cuentas retiradas. Las cuentas se crean **sin contraseña**: solo su titular la crea (§6).
+
+| Estado de acceso (`accessStatus`) | Significado |
+| --- | --- |
+| `PendingActivation` | Creada por la administración; el titular no ha completado su primer ingreso. |
+| `Ready` | Puede ingresar con su contraseña. |
+| `PasswordResetRequested` | La administración pidió que cree una contraseña nueva; la anterior ya no sirve. |
+
+Los enums viajan como texto en JSON (`"Leader"`, `"WhatsApp"`).
+
 ## Autenticación (`/api/auth`)
 
 | Endpoint | Acceso | Descripción |
 | --- | --- | --- |
-| `POST /api/auth/register` | Público | Registro limitado: crea un usuario activo, **sin roles** y con el email sin confirmar. Ignora cualquier otro campo. |
-| `POST /api/auth/login` | Público | `{ email, password, audience }`. Devuelve el par de tokens. |
+| `POST /api/auth/login` | Público | `{ identifier, password, audience }`. Teléfono, usuario o correo registrado. Devuelve el par de tokens. |
 | `POST /api/auth/refresh` | Público | `{ refreshToken, audience? }`. Rota el refresh token y devuelve un par nuevo. |
 | `POST /api/auth/logout` | Público | `{ refreshToken }`. Cierra esa sesión, también en las aplicaciones que entraron con ella. Responde 204 aunque el token no exista. |
 | `POST /api/auth/authorize` | Autenticado | `{ clientId, redirectUri, codeChallenge, codeChallengeMethod, state }`. Emite un código de autorización para la aplicación cliente y devuelve `{ redirectUri }` con `code` y `state`. |
 | `POST /api/auth/token` | Público | `{ code, codeVerifier, clientId, redirectUri }`. Cambia el código por el par de tokens del cliente, en la misma sesión. |
-| `GET /api/auth/me` | Autenticado | Perfil del usuario, con sus roles. |
-| `PUT /api/auth/me` | Autenticado | Cambia nombre, apellido y teléfono. El email, el estado y los roles solo los cambia un administrador. |
+| `POST /api/auth/service-token` | Público | `{ clientId, clientSecret }`. Token de servicio (rol `Service`, sin sesión) para el directorio. |
+| `GET /api/auth/me` | Autenticado | Mi perfil (`UserResponse`), con rol, estado de acceso y edad calculada. |
+| `PUT /api/auth/me` | Autenticado | Nombres, apellidos, género, teléfono, correo (opcional), usuario, Instagram y nacimiento. Rol, estado y designación solo los cambia la administración. |
 | `POST /api/auth/change-password` | Autenticado | `{ currentPassword, newPassword }`. Cierra **todas** las sesiones del usuario. |
+
+No hay registro público: las cuentas las crea la administración (§4).
+
+## Primer ingreso y recuperación (`/api/account`)
+
+Públicos: el titular aún no tiene sesión. El código llega **solo al teléfono registrado de la cuenta**, por SMS o
+WhatsApp; nunca se envían contraseñas.
+
+| Endpoint | Descripción |
+| --- | --- |
+| `POST /api/account/verification` | `{ identifier, channel, purpose }` con `channel` `Sms` o `WhatsApp` y `purpose` `Activation` o `Recovery`. Teléfono o usuario. Responde `{ verificationId }` **exista o no la cuenta** (no revela cuáles existen); solo envía el código si la cuenta corresponde al proceso. 503 si el canal no está configurado. |
+| `POST /api/account/verification/confirm` | `{ verificationId, code }` → `{ verificationToken }`. Un código inválido no cambia la cuenta; tras `MaxAttempts` fallos la solicitud deja de servir. |
+| `POST /api/account/activation/profile` | `{ verificationToken }` → datos ya registrados, para completar solo lo que falta. |
+| `POST /api/account/activation` | `{ verificationToken, password, firstName, lastName, gender, phoneNumber, email?, userName, instagram, birthDate }`. Contraseña y perfil se guardan **juntos** y la cuenta queda activada. Todos los datos del §5 son obligatorios menos el correo. |
+| `POST /api/account/password` | `{ verificationToken, password }`. Recuperación, o contraseña nueva tras un reinicio administrativo; cierra las sesiones anteriores. |
+
+El token de verificación es de un solo uso y vence con la solicitud (`Verification:LifetimeMinutes`).
 
 Los endpoints autenticados de Identity solo aceptan tokens con `aud = HobbitCoder.TMTBucaramanga.Identity`: para usarlos
 inicia sesión (o renueva) con esa audiencia.
@@ -171,12 +224,13 @@ Respuesta de `login` y `refresh`:
 }
 ```
 
-- **Credenciales.** El email es también el nombre de usuario y es único (sin distinguir mayúsculas). Contraseña: mínimo
-  8 caracteres con mayúscula, minúscula, número y símbolo. Un login fallido responde 401 con el mismo mensaje sea cual
-  sea el motivo (email inexistente, contraseña incorrecta, cuenta inactiva o bloqueada), para no revelar qué cuentas
-  existen; el motivo real queda en el log.
-- **Bloqueo.** 5 contraseñas incorrectas seguidas bloquean la cuenta 15 minutos. Un administrador la desbloquea al
-  asignarle una contraseña.
+- **Credenciales.** Contraseña: mínimo 8 caracteres con mayúscula, minúscula, número y símbolo. Un login fallido
+  responde 401 con el mismo mensaje sea cual sea el motivo (identificador inexistente, contraseña incorrecta, cuenta
+  sin activar, sin contraseña o bloqueada), para no revelar qué cuentas existen; el motivo real queda en el log. La
+  única excepción es una cuenta **desactivada con la contraseña correcta**: responde 403 ("acceso no disponible",
+  HU-02), algo que solo puede saber quien ya conoce la contraseña.
+- **Bloqueo.** 5 contraseñas incorrectas seguidas bloquean la cuenta 15 minutos. Crear una contraseña nueva con la
+  recuperación la desbloquea.
 
 ### Refresh tokens
 
@@ -190,8 +244,8 @@ Son responsabilidad exclusiva de Identity: las APIs consumidoras nunca los recib
   del mismo login), porque significa que alguien más tiene una copia. Usuario y atacante deben volver a iniciar sesión.
 - **Varias APIs, una sesión.** `refresh` acepta otra `audience` registrada para obtener un token de acceso para esa API.
   La sesión conserva su audiencia original: un `refresh` sin `audience` vuelve a emitir para ella.
-- **Revocación.** `logout` revoca la sesión; cambiar o asignar la contraseña, desactivar o eliminar al usuario revocan
-  todas. Los roles se leen en cada emisión: un cambio de roles llega en el siguiente `refresh`.
+- **Revocación.** `logout` revoca la sesión; cambiar o recuperar la contraseña, el reinicio administrativo, desactivar
+  o retirar al usuario revocan todas. El rol se lee en cada emisión: un cambio llega en el siguiente `refresh`.
 - Los **tokens de acceso** ya emitidos no se pueden revocar: siguen siendo válidos hasta su `exp` (60 minutos por
   defecto). Por eso su vida es corta.
 
@@ -228,19 +282,53 @@ código de autorización de OAuth 2.0 y PKCE (S256). Nunca reciben la contraseñ
 
 ## Usuarios (`/api/users`)
 
-Administración completa. Exige el rol `Admin` y un token con la audiencia de Identity.
+Administración de cuentas (§4.1, §4.5, HU-03). Exige el rol `Admin` o `Director` y un token con la audiencia de
+Identity. Las cuentas con rol `Admin` solo las crea o modifica otro administrador. Nadie define contraseñas ajenas.
 
 | Endpoint | Descripción |
 | --- | --- |
-| `GET /api/users` | Paginado (`pageNumber`, `pageSize` hasta 100). Filtros: `search` (email, nombre, apellido), `isActive`, `role`. |
-| `GET /api/users/{id}` | Detalle con roles. |
-| `POST /api/users` | Alta completa: datos, contraseña, `isActive`, `emailConfirmed` y `roles` (deben existir). |
-| `PUT /api/users/{id}` | Actualiza todo; `roles` **reemplaza** los actuales. Desactivar cierra sus sesiones. |
-| `PUT /api/users/{id}/password` | Asigna una contraseña nueva sin conocer la actual, desbloquea la cuenta y cierra sus sesiones. |
-| `DELETE /api/users/{id}` | Borrado lógico; cierra sus sesiones. El email queda reservado: no se puede volver a registrar. |
+| `GET /api/users` | Paginado (`pageNumber`, `pageSize` hasta 100). Filtros: `search` (nombre, apellido, usuario, correo, teléfono), `isActive`, `role`. |
+| `GET /api/users/retired` | Cuentas retiradas o desactivadas (registros retirados, §26). |
+| `GET /api/users/{id}` | Detalle. |
+| `POST /api/users` | Alta **sin contraseña**: nombres, apellidos, teléfono, usuario y rol obligatorios; género, correo, Instagram, nacimiento, `isActive` y `canRegisterAttendees` opcionales. |
+| `PUT /api/users/{id}` | Actualiza datos, rol, estado y designación. Desactivar cierra sus sesiones. |
+| `POST /api/users/{id}/password-reset` | Pide que el titular cree una contraseña nueva: invalida la actual y cierra sus sesiones. |
+| `DELETE /api/users/{id}` | Retiro (borrado lógico); cierra sus sesiones. Sus identificadores siguen reservados. |
+| `POST /api/users/{id}/restore` | Restaura una cuenta retirada o desactivada (queda activa). |
+| `DELETE /api/users/{id}/permanent` | Eliminación definitiva de una cuenta retirada o desactivada. |
 
-Un administrador no puede desactivarse, quitarse el rol `Admin` ni eliminarse a sí mismo (409), para que la plataforma
-no se quede sin administradores.
+Nadie puede desactivarse, retirarse, eliminarse ni cambiar su propio rol (409). Cada cambio queda en la auditoría de
+cuentas.
+
+## Auditoría de cuentas (`/api/audit/accounts`)
+
+Solo directores (§25). Paginada, con filtros `from`, `to`, `action` y `actorUserId`. Cada entrada guarda actor,
+momento, acción, cuenta afectada (nombre de ese momento) y datos anteriores/resultantes en JSON, nunca contraseñas
+ni hashes. No referencia la cuenta con clave foránea: sobrevive a su eliminación definitiva.
+
+## Directorio para Sheepfold
+
+`GET /api/directory/users` devuelve las cuentas vigentes (id, nombre, género, teléfono, nacimiento, rol, estado,
+activación y designación). Solo acepta tokens de servicio: la API de Sheepfold pide uno con
+`POST /api/auth/service-token` usando su cliente de `Jwt:ServiceClients` y decide qué ve cada usuario según su alcance
+ministerial. El teléfono solo se usa para notificaciones por WhatsApp (§23).
+
+```powershell
+dotnet user-secrets set 'Jwt:ServiceClients:0:ClientId' 'sheepfold-api' --project $project
+dotnet user-secrets set 'Jwt:ServiceClients:0:Secret' '<secreto de 32+ caracteres>' --project $project
+```
+
+## Mensajes de seguridad (SMS / WhatsApp)
+
+No hay proveedor contratado. Identity envía cada código a una **pasarela HTTP configurable**:
+`POST {Messaging:GatewayUrl}` con `Authorization: Bearer {Messaging:ApiKey}` y el cuerpo
+`{ "channel": "sms" o "whatsapp", "to": "+57...", "template": "security-code", "parameters": { "code", "purpose" } }`.
+La pasarela (o el proveedor que se contrate) traduce la plantilla al mensaje aprobado del canal.
+
+- Sin `GatewayUrl` en **Development**, el código se escribe en el log (nivel Warning) para probar los flujos sin
+  enviar mensajes reales.
+- Sin `GatewayUrl` en otro ambiente, pedir un código responde **503**: no se finge el envío.
+- Plazos, plantillas, reintentos y estados de entrega quedan pendientes del contrato del proveedor.
 
 ## Discovery y JWKS
 
@@ -310,7 +398,8 @@ termina el Traefik de Dokploy con Let's Encrypt; la imagen respeta sus encabezad
 | --- | --- |
 | `ConnectionStrings__Default` | Cadena de conexión al PostgreSQL de producción (base `TmtBucaramangaIdentity`). |
 | `Jwt__SigningKey__PemPath` | `/run/secrets/identity-signing-key.pem` (ver abajo). |
-| `Bootstrap__Admin__Email` / `Bootstrap__Admin__Password` | Solo para crear el primer administrador; luego se puede quitar la contraseña. |
+| `Jwt__ServiceClients__0__ClientId` / `Jwt__ServiceClients__0__Secret` | Cliente de servicio de la API de Sheepfold (el mismo secreto se configura en Sheepfold). |
+| `Messaging__GatewayUrl` / `Messaging__ApiKey` | Pasarela de SMS/WhatsApp. Sin ella, la verificación responde 503. |
 
 `Jwt:Issuer` (`https://identity.tmtbucaramanga.com`), el cliente de Sheepfold (`Jwt:Clients`) y el origen CORS de su
 frontend (`https://sheepfold.tmtbucaramanga.com`) ya vienen en `appsettings.Production.json`; no hace falta
@@ -338,8 +427,9 @@ Despliega Identity antes que Sheepfold: Sheepfold descarga el discovery de `http
 dotnet run --project HobbitCoder.TMTBucaramanga.Identity.IntegrationTests
 ```
 
-Requieren **Docker**: las pruebas de autenticación y usuarios usan un PostgreSQL real (Testcontainers) cuyo esquema se
-crea desde el modelo de EF. Las de tokens levantan además una API con exactamente la configuración de arriba contra
+Requieren **Docker**: las pruebas de autenticación, primer ingreso y usuarios usan un PostgreSQL real
+(Testcontainers) cuyo esquema se crea desde el modelo de EF. La pasarela de mensajería se reemplaza por un doble de
+prueba que captura los códigos; nunca se envían mensajes reales. Las de tokens levantan además una API con exactamente la configuración de arriba contra
 Identity en memoria.
 
 ## Migraciones

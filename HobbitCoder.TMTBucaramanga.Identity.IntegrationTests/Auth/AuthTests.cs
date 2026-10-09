@@ -1,4 +1,5 @@
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
+using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 using HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Contexts;
 using HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Infrastructure;
@@ -26,12 +27,12 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task Register_ThenLogin_ReturnsTokensForRequestedAudienceAndProfile()
+    public async Task ActivatedAccount_Login_ReturnsTokensForRequestedAudienceAndProfile()
     {
-        var email = AuthApi.NewEmail();
-        var userId = await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var userId = account.Id;
 
-        var tokens = await _client.LoginAsync(email);
+        var tokens = await _client.LoginAsync(account.UserName);
 
         var accessToken = new JsonWebToken(tokens.AccessToken);
         Assert.Equal(userId.ToString(), accessToken.Subject);
@@ -44,64 +45,22 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var me = await response.ReadAsync<UserResponse>();
         Assert.Equal(userId, me.Id);
-        Assert.Equal(email, me.Email);
-        Assert.Empty(me.Roles);
-    }
-
-    [Fact]
-    public async Task Register_IgnoresAdminOnlyFields()
-    {
-        var email = AuthApi.NewEmail();
-        using var registered = await _client.PostRegisterAsync(new
-        {
-            email,
-            password = AuthApi.Password,
-            firstName = "Ana",
-            lastName = "Pérez",
-            roles = new[] { "Admin" },
-            isActive = false,
-            emailConfirmed = true
-        });
-        Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
-
-        var tokens = await _client.LoginAsync(email);
-        using var response = await _client.SendAsync(HttpMethod.Get, "/api/auth/me", tokens.AccessToken);
-        var me = await response.ReadAsync<UserResponse>();
-
-        Assert.Empty(me.Roles);
-        Assert.True(me.IsActive);
-        Assert.False(me.EmailConfirmed);
-    }
-
-    [Fact]
-    public async Task Register_WithRegisteredEmailInOtherCase_Returns409()
-    {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-
-        using var response = await _client.PostRegisterAsync(new { email = email.ToUpperInvariant(), password = AuthApi.Password, firstName = "Ana", lastName = "Pérez" });
-
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Register_WithWeakPassword_Returns400OnPassword()
-    {
-        using var response = await _client.PostRegisterAsync(new { email = AuthApi.NewEmail(), password = "corta", firstName = "Ana", lastName = "Pérez" });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var problem = await response.ReadAsync<ValidationProblemDetails>();
-        Assert.Contains("Password", problem.Errors.Keys);
+        Assert.Equal(account.UserName, me.UserName);
+        Assert.Equal(UserRole.Leader, me.Role);
+        Assert.Equal(AccessStatus.Ready, me.AccessStatus);
+        Assert.Equal([RoleNames.Leader], accessToken.Claims.Where(claim => claim.Type == "role").Select(claim => claim.Value));
     }
 
     [Fact]
     public async Task Login_WithWrongPasswordOrUnknownEmail_Returns401WithSameMessage()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
 
-        using var wrongPassword = await _client.PostLoginAsync(email, "Otra#Clave2026");
+        using var wrongPassword = await _client.PostLoginAsync(identifier, "Otra#Clave2026");
         using var unknownEmail = await _client.PostLoginAsync(AuthApi.NewEmail(), AuthApi.Password);
+        using var unknownPhone = await _client.PostLoginAsync(AuthApi.NewPhoneNumber(), AuthApi.Password);
+        Assert.Equal(HttpStatusCode.Unauthorized, unknownPhone.StatusCode);
 
         Assert.Equal(HttpStatusCode.Unauthorized, wrongPassword.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, unknownEmail.StatusCode);
@@ -111,16 +70,16 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Login_AfterFiveFailedAttempts_LocksTheAccount()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
 
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            using var failed = await _client.PostLoginAsync(email, "Otra#Clave2026");
+            using var failed = await _client.PostLoginAsync(identifier, "Otra#Clave2026");
             Assert.Equal(HttpStatusCode.Unauthorized, failed.StatusCode);
         }
 
-        using var response = await _client.PostLoginAsync(email, AuthApi.Password);
+        using var response = await _client.PostLoginAsync(identifier, AuthApi.Password);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -128,10 +87,10 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Login_ForUnregisteredAudience_Returns400()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
 
-        using var response = await _client.PostLoginAsync(email, AuthApi.Password, "HobbitCoder.TMTBucaramanga.NoRegistrada");
+        using var response = await _client.PostLoginAsync(identifier, AuthApi.Password, "HobbitCoder.TMTBucaramanga.NoRegistrada");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -139,9 +98,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task RefreshToken_IsStoredOnlyAsSha256Hash()
     {
-        var email = AuthApi.NewEmail();
-        var userId = await _client.RegisterAsync(email);
-        var tokens = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var userId = account.Id;
+        var tokens = await _client.LoginAsync(account.UserName);
 
         using var scope = _fixture.Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityContext>();
@@ -155,9 +114,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Refresh_RotatesTokens_AndReusingARotatedTokenRevokesTheSession()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var first = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
+        var first = await _client.LoginAsync(identifier);
 
         var second = await _client.RefreshAsync(first.RefreshToken);
         Assert.NotEqual(first.RefreshToken, second.RefreshToken);
@@ -172,7 +131,7 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
 
         using var scope = _fixture.Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityContext>();
-        var familyId = (await dbContext.RefreshTokens.FirstAsync(token => token.ReplacedByTokenId != null && token.User.Email == email, CancellationToken)).FamilyId;
+        var familyId = (await dbContext.RefreshTokens.FirstAsync(token => token.RevocationReason == RefreshTokenRevocationReason.Rotated && token.User.UserName == identifier, CancellationToken)).FamilyId;
         var reasons = await dbContext.RefreshTokens.Where(token => token.FamilyId == familyId).Select(token => token.RevocationReason).ToListAsync(CancellationToken);
         Assert.Equal([RefreshTokenRevocationReason.Rotated, RefreshTokenRevocationReason.ReuseDetected], reasons.Order());
     }
@@ -180,9 +139,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Refresh_ConcurrentRequestsWithSameToken_OnlyOneSucceeds()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var tokens = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
+        var tokens = await _client.LoginAsync(identifier);
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => _client.PostRefreshAsync(tokens.RefreshToken)));
 
@@ -199,9 +158,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Refresh_ForAnotherRegisteredAudience_IssuesAccessTokenForThatApi()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var identityTokens = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
+        var identityTokens = await _client.LoginAsync(identifier);
 
         var sheepfoldTokens = await _client.RefreshAsync(identityTokens.RefreshToken, IdentityApiFactory.SheepfoldAudience);
 
@@ -227,10 +186,10 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task Logout_RevokesTheSession_AndIsIdempotent()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var tokens = await _client.LoginAsync(email);
-        var otherSession = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
+        var tokens = await _client.LoginAsync(identifier);
+        var otherSession = await _client.LoginAsync(identifier);
 
         using var logout = await _client.SendAsync(HttpMethod.Post, "/api/auth/logout", null, new { refreshToken = tokens.RefreshToken });
         using var repeated = await _client.SendAsync(HttpMethod.Post, "/api/auth/logout", null, new { refreshToken = tokens.RefreshToken });
@@ -250,9 +209,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task ChangePassword_RequiresCurrentPassword_AndClosesAllSessions()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var tokens = await _client.LoginAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
+        var tokens = await _client.LoginAsync(identifier);
         const string newPassword = "Nueva#Clave2026";
 
         using var wrongCurrent = await _client.SendAsync(HttpMethod.Post, "/api/auth/change-password", tokens.AccessToken,
@@ -267,27 +226,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         using var refresh = await _client.PostRefreshAsync(tokens.RefreshToken);
         Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
 
-        using var oldPassword = await _client.PostLoginAsync(email, AuthApi.Password);
+        using var oldPassword = await _client.PostLoginAsync(identifier, AuthApi.Password);
         Assert.Equal(HttpStatusCode.Unauthorized, oldPassword.StatusCode);
-        await _client.LoginAsync(email, newPassword);
-    }
-
-    [Fact]
-    public async Task UpdateProfile_ChangesPersonalData()
-    {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
-        var tokens = await _client.LoginAsync(email);
-
-        using var update = await _client.SendAsync(HttpMethod.Put, "/api/auth/me", tokens.AccessToken,
-            new { firstName = "María", lastName = "Gómez", phoneNumber = "+57 300 000 0000" });
-        Assert.Equal(HttpStatusCode.NoContent, update.StatusCode);
-
-        using var response = await _client.SendAsync(HttpMethod.Get, "/api/auth/me", tokens.AccessToken);
-        var me = await response.ReadAsync<UserResponse>();
-        Assert.Equal("María", me.FirstName);
-        Assert.Equal("Gómez", me.LastName);
-        Assert.Equal("+57 300 000 0000", me.PhoneNumber);
+        await _client.LoginAsync(identifier, newPassword);
     }
 
     [Fact]
@@ -301,10 +242,10 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
     [Fact]
     public async Task AuthResponse_ExpirationsMatchConfiguredLifetimes()
     {
-        var email = AuthApi.NewEmail();
-        await _client.RegisterAsync(email);
+        var account = await _fixture.CreateAccountAsync(_client);
+        var identifier = account.UserName;
 
-        var tokens = await _client.LoginAsync(email);
+        var tokens = await _client.LoginAsync(identifier);
 
         Assert.Equal(new JsonWebToken(tokens.AccessToken).ValidTo, tokens.AccessTokenExpiresAt.UtcDateTime);
         Assert.InRange(tokens.RefreshTokenExpiresAt - DateTimeOffset.UtcNow, TimeSpan.FromDays(14) - TimeSpan.FromMinutes(1), TimeSpan.FromDays(14));

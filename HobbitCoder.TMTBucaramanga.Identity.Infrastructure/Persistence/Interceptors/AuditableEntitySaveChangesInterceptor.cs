@@ -8,7 +8,8 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Interce
 /// <summary>
 /// Completa los campos de auditoría al guardar y convierte en borrado lógico la eliminación
 /// de entidades <see cref="ISoftDeleteableEntity"/>: los handlers solo hacen <c>Remove</c>,
-/// sin asignar fechas ni usuarios a mano.
+/// sin asignar fechas ni usuarios a mano. Quitar una entidad que ya estaba eliminada lógicamente
+/// (<c>IsDeleted</c> en true) es la eliminación definitiva y llega tal cual a la base de datos.
 /// </summary>
 public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
 {
@@ -52,7 +53,7 @@ public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
                     entry.Entity.UpdatedDate = now;
                     break;
 
-                case EntityState.Deleted when entry.Entity is ISoftDeleteableEntity softDeleteableEntity:
+                case EntityState.Deleted when entry.Entity is ISoftDeleteableEntity { IsDeleted: false } softDeleteableEntity:
                     entry.State = EntityState.Modified;
                     softDeleteableEntity.IsDeleted = true;
                     softDeleteableEntity.DeletedAt = now;

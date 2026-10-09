@@ -1,48 +1,80 @@
+using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Exceptions;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Utils;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 
 public static class UserQueryExtensions
 {
-    /// <summary>Proyecta los usuarios a <see cref="UserResponse"/> con sus roles en una sola consulta.</summary>
-    public static IQueryable<UserResponse> SelectUserResponse(this IQueryable<User> users, IApplicationDbContext dbContext) =>
-        users.Select(user => new UserResponse
+    /// <summary>
+    /// Busca la cuenta de un identificador de acceso (§6): correo si contiene <c>@</c>, teléfono si solo
+    /// tiene dígitos y separadores, y nombre de usuario en otro caso. Un correo no registrado no identifica
+    /// ninguna cuenta.
+    /// </summary>
+    public static Task<User?> FindByLoginIdentifierAsync(
+        this IApplicationDbContext dbContext, ILookupNormalizer normalizer, string identifier, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(normalizer);
+        var trimmed = identifier.Trim();
+
+        if (trimmed.Contains('@', StringComparison.Ordinal))
         {
-            Id = user.Id,
-            Email = user.Email!,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            PhoneNumber = user.PhoneNumber,
-            IsActive = user.IsActive,
-            EmailConfirmed = user.EmailConfirmed,
-            LockoutEnd = user.LockoutEnd,
-            CreatedDate = user.CreatedDate,
-            Roles = dbContext.UserRoles
-                .Where(userRole => userRole.UserId == user.Id)
-                .Join(dbContext.Roles, userRole => userRole.RoleId, role => role.Id, (_, role) => role.Name!)
-                .OrderBy(roleName => roleName)
-                .ToList()
-        });
+            var normalizedEmail = normalizer.NormalizeEmail(trimmed);
+            return dbContext.Users.FirstOrDefaultAsync(user => user.NormalizedEmail == normalizedEmail, cancellationToken);
+        }
+
+        if (PhoneNumbers.Normalize(trimmed) is { } phoneNumber)
+        {
+            return dbContext.Users.FirstOrDefaultAsync(user => user.PhoneNumber == phoneNumber, cancellationToken);
+        }
+
+        var normalizedUserName = normalizer.NormalizeName(trimmed);
+        return dbContext.Users.FirstOrDefaultAsync(user => user.NormalizedUserName == normalizedUserName, cancellationToken);
+    }
 
     /// <summary>
-    /// Indica si el email ya lo usa otro usuario, incluidos los eliminados lógicamente: el índice único
-    /// de la base de datos también los cuenta, así que reutilizar su email fallaría al guardar.
+    /// Comprueba que el nombre de usuario, el teléfono y el correo (si hay) no los use otra cuenta, incluidas
+    /// las eliminadas lógicamente: los índices únicos de la base también las cuentan.
     /// </summary>
-    public static Task<bool> IsEmailTakenAsync(this IApplicationDbContext dbContext, string normalizedEmail, Guid? exceptUserId, CancellationToken cancellationToken) =>
-        dbContext.Users
-            .IgnoreQueryFilters()
-            .AnyAsync(user => (user.NormalizedEmail == normalizedEmail || user.NormalizedUserName == normalizedEmail)
-                && user.Id != exceptUserId, cancellationToken);
-
-    /// <summary>Indica si todos los roles existen (sin distinguir mayúsculas).</summary>
-    public static async Task<bool> RolesExistAsync(this IApplicationDbContext dbContext, IEnumerable<string> roleNames, CancellationToken cancellationToken)
+    /// <exception cref="ConflictException">Alguno ya está registrado.</exception>
+    public static async Task EnsureIdentifiersAvailableAsync(
+        this IApplicationDbContext dbContext,
+        ILookupNormalizer normalizer,
+        string userName,
+        string phoneNumber,
+        string? email,
+        Guid? exceptUserId,
+        CancellationToken cancellationToken)
     {
-        var normalizedNames = roleNames.Select(roleName => roleName.ToUpperInvariant()).Distinct().ToList();
+        ArgumentNullException.ThrowIfNull(normalizer);
 
-        var existing = await dbContext.Roles.CountAsync(role => normalizedNames.Contains(role.NormalizedName!), cancellationToken);
+        var users = dbContext.Users.IgnoreQueryFilters().Where(user => user.Id != exceptUserId);
+        var normalizedUserName = normalizer.NormalizeName(userName);
 
-        return existing == normalizedNames.Count;
+        if (await users.AnyAsync(user => user.NormalizedUserName == normalizedUserName, cancellationToken))
+        {
+            throw new ConflictException($"The user name '{userName}' is already registered.");
+        }
+
+        if (await users.AnyAsync(user => user.PhoneNumber == phoneNumber, cancellationToken))
+        {
+            throw new ConflictException("The phone number is already registered.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var normalizedEmail = normalizer.NormalizeEmail(email);
+
+            if (await users.AnyAsync(user => user.NormalizedEmail == normalizedEmail, cancellationToken))
+            {
+                throw new ConflictException($"The email '{email}' is already registered.");
+            }
+        }
     }
+
+    /// <summary>Correo vacío como <c>null</c>: el correo es opcional.</summary>
+    public static string? EmptyAsNull(this string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
