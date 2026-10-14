@@ -26,7 +26,7 @@ Identity y reciben un código de autorización que cambian por tokens (OAuth 2.0
 | `Jwt:ServiceClients` | Aplicaciones de servidor que consultan el directorio (`ClientId`, `Secret` de 32+ caracteres). Ver [Directorio](#directorio-para-sheepfold). |
 | `Bootstrap:Admin:UserName` / `PhoneNumber` / `Password` | Administrador que se crea al arrancar si no hay ninguno (user-secrets o variables de entorno, nunca `appsettings`). Ver [Primer administrador](#primer-administrador). |
 | `Verification:CodeLength` / `LifetimeMinutes` / `MaxAttempts` | Política de los códigos de seguridad. Por defecto `6`, `15` y `5`: el requerimiento no los fija (contrato pendiente). |
-| `Messaging:GatewayUrl` / `ApiKey` / `TimeoutSeconds` | Pasarela de SMS/WhatsApp. Ver [Mensajes de seguridad](#mensajes-de-seguridad-sms--whatsapp). |
+| `Messaging:PhoneNumberId` / `AccessToken` / `CodeTemplate` / `TemplateLanguage` / `ApiVersion` | WhatsApp Cloud API. Ver [Mensajes de seguridad](#mensajes-de-seguridad-whatsapp). |
 | `CorsSettings:*` | Política CORS por ambiente, en los `appsettings`. Ver [CORS](#cors). |
 
 Como variable de entorno, `:` se escribe `__` (`Jwt__Issuer`, `Jwt__SigningKey__Pem`, `Jwt__Audiences__0`, ...).
@@ -195,12 +195,12 @@ No hay registro público: las cuentas las crea la administración (§4).
 
 ## Primer ingreso y recuperación (`/api/account`)
 
-Públicos: el titular aún no tiene sesión. El código llega **solo al teléfono registrado de la cuenta**, por SMS o
+Públicos: el titular aún no tiene sesión. El código llega **solo al teléfono registrado de la cuenta**, por
 WhatsApp; nunca se envían contraseñas.
 
 | Endpoint | Descripción |
 | --- | --- |
-| `POST /api/account/verification` | `{ identifier, channel, purpose }` con `channel` `Sms` o `WhatsApp` y `purpose` `Activation` o `Recovery`. Teléfono o usuario. Responde `{ verificationId }` **exista o no la cuenta** (no revela cuáles existen); solo envía el código si la cuenta corresponde al proceso. 503 si el canal no está configurado. |
+| `POST /api/account/verification` | `{ identifier, channel, purpose }` con `channel` `Sms` o `WhatsApp` y `purpose` `Activation` o `Recovery`. Teléfono o usuario. Responde `{ verificationId }` **exista o no la cuenta** (no revela cuáles existen); solo envía el código si la cuenta corresponde al proceso. 503 si WhatsApp no está configurado o si se pide `Sms` (el proveedor no envía SMS; el frontend solo ofrece WhatsApp). |
 | `POST /api/account/verification/confirm` | `{ verificationId, code }` → `{ verificationToken }`. Un código inválido no cambia la cuenta; tras `MaxAttempts` fallos la solicitud deja de servir. |
 | `POST /api/account/activation/profile` | `{ verificationToken }` → datos ya registrados, para completar solo lo que falta. |
 | `POST /api/account/activation` | `{ verificationToken, password, firstName, lastName, gender, phoneNumber, email?, userName, instagram, birthDate }`. Contraseña y perfil se guardan **juntos** y la cuenta queda activada. Todos los datos del §5 son obligatorios menos el correo. |
@@ -318,17 +318,20 @@ dotnet user-secrets set 'Jwt:ServiceClients:0:ClientId' 'sheepfold-api' --projec
 dotnet user-secrets set 'Jwt:ServiceClients:0:Secret' '<secreto de 32+ caracteres>' --project $project
 ```
 
-## Mensajes de seguridad (SMS / WhatsApp)
+## Mensajes de seguridad (WhatsApp)
 
-No hay proveedor contratado. Identity envía cada código a una **pasarela HTTP configurable**:
-`POST {Messaging:GatewayUrl}` con `Authorization: Bearer {Messaging:ApiKey}` y el cuerpo
-`{ "channel": "sms" o "whatsapp", "to": "+57...", "template": "security-code", "parameters": { "code", "purpose" } }`.
-La pasarela (o el proveedor que se contrate) traduce la plantilla al mensaje aprobado del canal.
+El proveedor es **WhatsApp Cloud API** de Meta (`Messaging/SecurityMessageSenders.cs`). Cada código se envía con
+`POST {BaseUrl}/{ApiVersion}/{PhoneNumberId}/messages`, `Authorization: Bearer {AccessToken}` y la plantilla de
+**autenticación** `Messaging:CodeTemplate` (por defecto `tmt_codigo_seguridad`, idioma `es`): el código va en el
+cuerpo y en el botón "Copiar código". Creación de la plantilla y de las credenciales en
+`docs/requerimiento/whatsapp-cloud-api.md`.
 
-- Sin `GatewayUrl` en **Development**, el código se escribe en el log (nivel Warning) para probar los flujos sin
-  enviar mensajes reales.
-- Sin `GatewayUrl` en otro ambiente, pedir un código responde **503**: no se finge el envío.
-- Plazos, plantillas, reintentos y estados de entrega quedan pendientes del contrato del proveedor.
+- Sin `PhoneNumberId` y `AccessToken` en **Development**, el código se escribe en el log (nivel Warning) para probar
+  los flujos sin enviar mensajes reales.
+- Sin ellos en otro ambiente, pedir un código responde **503**: no se finge el envío.
+- El canal `Sms` responde 503 (Meta no envía SMS).
+- Si Meta rechaza el envío, se registra `error.code` y `error.message` de la respuesta (sin el cuerpo completo) y
+  la API responde 503. No hay reintentos ni estados de entrega.
 
 ## Discovery y JWKS
 
@@ -399,7 +402,7 @@ termina el Traefik de Dokploy con Let's Encrypt; la imagen respeta sus encabezad
 | `ConnectionStrings__Default` | Cadena de conexión al PostgreSQL de producción (base `TmtBucaramangaIdentity`). |
 | `Jwt__SigningKey__PemPath` | `/run/secrets/identity-signing-key.pem` (ver abajo). |
 | `Jwt__ServiceClients__0__ClientId` / `Jwt__ServiceClients__0__Secret` | Cliente de servicio de la API de Sheepfold (el mismo secreto se configura en Sheepfold). |
-| `Messaging__GatewayUrl` / `Messaging__ApiKey` | Pasarela de SMS/WhatsApp. Sin ella, la verificación responde 503. |
+| `Messaging__PhoneNumberId` / `Messaging__AccessToken` | WhatsApp Cloud API. Sin ellos, la verificación responde 503. |
 
 `Jwt:Issuer` (`https://identity.tmtbucaramanga.com`), el cliente de Sheepfold (`Jwt:Clients`) y el origen CORS de su
 frontend (`https://sheepfold.tmtbucaramanga.com`) ya vienen en `appsettings.Production.json`; no hace falta
@@ -428,7 +431,7 @@ dotnet run --project HobbitCoder.TMTBucaramanga.Identity.IntegrationTests
 ```
 
 Requieren **Docker**: las pruebas de autenticación, primer ingreso y usuarios usan un PostgreSQL real
-(Testcontainers) cuyo esquema se crea desde el modelo de EF. La pasarela de mensajería se reemplaza por un doble de
+(Testcontainers) cuyo esquema se crea desde el modelo de EF. El envío por WhatsApp se reemplaza por un doble de
 prueba que captura los códigos; nunca se envían mensajes reales. Las de tokens levantan además una API con exactamente la configuración de arriba contra
 Identity en memoria.
 

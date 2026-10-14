@@ -9,7 +9,7 @@ public static partial class Configuration
 {
     /// <summary>
     /// Registra la verificación de identidad: política de códigos (<see cref="VerificationSettings"/>) y el
-    /// envío de mensajes de seguridad por la pasarela configurada en <see cref="MessagingSettings"/>.
+    /// envío de mensajes de seguridad por WhatsApp Cloud API según <see cref="MessagingSettings"/>.
     /// </summary>
     public static IHostApplicationBuilder AddSecurityMessaging(this IHostApplicationBuilder builder)
     {
@@ -25,17 +25,17 @@ public static partial class Configuration
 
         builder.Services.AddOptions<MessagingSettings>()
             .Bind(builder.Configuration.GetSection(MessagingSettings.SectionName))
-            .Validate(settings => string.IsNullOrWhiteSpace(settings.GatewayUrl) || IsHttpsUrl(settings.GatewayUrl),
-                $"{MessagingSettings.SectionName}:GatewayUrl debe ser una URL absoluta https.")
+            .Validate(settings => IsHttpsUrl(settings.BaseUrl), $"{MessagingSettings.SectionName}:BaseUrl debe ser una URL absoluta https.")
+            .Validate(settings => settings.TimeoutSeconds > 0, $"{MessagingSettings.SectionName}:TimeoutSeconds debe ser mayor que cero.")
             .ValidateOnStart();
 
         var settings = builder.Configuration.GetSection(MessagingSettings.SectionName).Get<MessagingSettings>() ?? new MessagingSettings();
 
-        if (!string.IsNullOrWhiteSpace(settings.GatewayUrl))
+        if (settings.IsConfigured)
         {
-            builder.Services.AddHttpClient(HttpSecurityMessageSender.HttpClientName,
+            builder.Services.AddHttpClient(WhatsAppSecurityMessageSender.HttpClientName,
                 client => client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds));
-            builder.Services.AddScoped<ISecurityMessageSender, HttpSecurityMessageSender>();
+            builder.Services.AddScoped<ISecurityMessageSender, WhatsAppSecurityMessageSender>();
         }
         else if (builder.Environment.IsDevelopment())
         {
