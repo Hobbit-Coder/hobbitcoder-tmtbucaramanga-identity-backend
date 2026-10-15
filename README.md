@@ -26,7 +26,7 @@ Identity y reciben un código de autorización que cambian por tokens (OAuth 2.0
 | `Jwt:ServiceClients` | Aplicaciones de servidor que consultan el directorio (`ClientId`, `Secret` de 32+ caracteres). Ver [Directorio](#directorio-para-sheepfold). |
 | `Bootstrap:Admin:UserName` / `PhoneNumber` / `Password` | Administrador que se crea al arrancar si no hay ninguno (user-secrets o variables de entorno, nunca `appsettings`). Ver [Primer administrador](#primer-administrador). |
 | `Verification:CodeLength` / `LifetimeMinutes` / `MaxAttempts` | Política de los códigos de seguridad. Por defecto `6`, `15` y `5`: el requerimiento no los fija (contrato pendiente). |
-| `Messaging:PhoneNumberId` / `AccessToken` / `CodeTemplate` / `TemplateLanguage` / `ApiVersion` | WhatsApp Cloud API. Ver [Mensajes de seguridad](#mensajes-de-seguridad-whatsapp). |
+| `Messaging:Provider` / `Evolution:*` / `Meta:*` / `TimeoutSeconds` | WhatsApp para los códigos: Evolution API autoalojado (por defecto) o WhatsApp Cloud API de Meta. Ver [Mensajes de seguridad](#mensajes-de-seguridad-whatsapp). |
 | `CorsSettings:*` | Política CORS por ambiente, en los `appsettings`. Ver [CORS](#cors). |
 
 Como variable de entorno, `:` se escribe `__` (`Jwt__Issuer`, `Jwt__SigningKey__Pem`, `Jwt__Audiences__0`, ...).
@@ -320,18 +320,23 @@ dotnet user-secrets set 'Jwt:ServiceClients:0:Secret' '<secreto de 32+ caractere
 
 ## Mensajes de seguridad (WhatsApp)
 
-El proveedor es **WhatsApp Cloud API** de Meta (`Messaging/SecurityMessageSenders.cs`). Cada código se envía con
-`POST {BaseUrl}/{ApiVersion}/{PhoneNumberId}/messages`, `Authorization: Bearer {AccessToken}` y la plantilla de
-**autenticación** `Messaging:CodeTemplate` (por defecto `tmt_codigo_seguridad`, idioma `es`): el código va en el
-cuerpo y en el botón "Copiar código". Creación de la plantilla y de las credenciales en
-`docs/requerimiento/whatsapp-cloud-api.md`.
+El proveedor se elige con `Messaging:Provider` (`Messaging/SecurityMessageSenders.cs`):
 
-- Sin `PhoneNumberId` y `AccessToken` en **Development**, el código se escribe en el log (nivel Warning) para probar
+- **`Evolution`** (por defecto): Evolution API v2 autoalojado. Confirma con
+  `POST {Evolution:Url}/chat/whatsappNumbers/{Evolution:Instance}` que el teléfono tiene WhatsApp y envía el código
+  como texto con `POST {Evolution:Url}/message/sendText/{Evolution:Instance}` y la cabecera
+  `apikey: {Evolution:ApiKey}`. Instancia, número y secretos en `docs/requerimiento/whatsapp-evolution.md`.
+- **`Meta`**: WhatsApp Cloud API con la plantilla de autenticación `Meta:CodeTemplate` (requiere un negocio
+  verificado). Ver `docs/requerimiento/whatsapp-cloud-api.md`.
+
+Comportamiento común:
+
+- Sin las credenciales del proveedor en **Development**, el código se escribe en el log (nivel Warning) para probar
   los flujos sin enviar mensajes reales.
-- Sin ellos en otro ambiente, pedir un código responde **503**: no se finge el envío.
-- El canal `Sms` responde 503 (Meta no envía SMS).
-- Si Meta rechaza el envío, se registra `error.code` y `error.message` de la respuesta (sin el cuerpo completo) y
-  la API responde 503. No hay reintentos ni estados de entrega.
+- Sin ellas en otro ambiente, pedir un código responde **503**: no se finge el envío.
+- El canal `Sms` responde 503 (ningún proveedor envía SMS).
+- Si el proveedor rechaza el envío o el teléfono no tiene WhatsApp, se registra el estado y el mensaje de error (sin
+  el cuerpo completo) y la API responde 503. No hay reintentos ni estados de entrega.
 
 ## Discovery y JWKS
 
@@ -402,7 +407,7 @@ termina el Traefik de Dokploy con Let's Encrypt; la imagen respeta sus encabezad
 | `ConnectionStrings__Default` | Cadena de conexión al PostgreSQL de producción (base `TmtBucaramangaIdentity`). |
 | `Jwt__SigningKey__PemPath` | `/run/secrets/identity-signing-key.pem` (ver abajo). |
 | `Jwt__ServiceClients__0__ClientId` / `Jwt__ServiceClients__0__Secret` | Cliente de servicio de la API de Sheepfold (el mismo secreto se configura en Sheepfold). |
-| `Messaging__PhoneNumberId` / `Messaging__AccessToken` | WhatsApp Cloud API. Sin ellos, la verificación responde 503. |
+| `Messaging__Evolution__Url` / `Messaging__Evolution__Instance` / `Messaging__Evolution__ApiKey` | Evolution API (`docs/requerimiento/whatsapp-evolution.md`). Sin ellos, la verificación responde 503. |
 
 `Jwt:Issuer` (`https://identity.tmtbucaramanga.com`), el cliente de Sheepfold (`Jwt:Clients`) y el origen CORS de su
 frontend (`https://sheepfold.tmtbucaramanga.com`) ya vienen en `appsettings.Production.json`; no hace falta

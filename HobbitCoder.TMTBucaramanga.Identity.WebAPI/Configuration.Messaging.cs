@@ -9,7 +9,7 @@ public static partial class Configuration
 {
     /// <summary>
     /// Registra la verificación de identidad: política de códigos (<see cref="VerificationSettings"/>) y el
-    /// envío de mensajes de seguridad por WhatsApp Cloud API según <see cref="MessagingSettings"/>.
+    /// envío de mensajes de seguridad por WhatsApp con el proveedor de <see cref="MessagingSettings"/> (Evolution o Meta).
     /// </summary>
     public static IHostApplicationBuilder AddSecurityMessaging(this IHostApplicationBuilder builder)
     {
@@ -25,7 +25,10 @@ public static partial class Configuration
 
         builder.Services.AddOptions<MessagingSettings>()
             .Bind(builder.Configuration.GetSection(MessagingSettings.SectionName))
-            .Validate(settings => IsHttpsUrl(settings.BaseUrl), $"{MessagingSettings.SectionName}:BaseUrl debe ser una URL absoluta https.")
+            .Validate(settings => Enum.IsDefined(settings.Provider), $"{MessagingSettings.SectionName}:Provider debe ser Evolution o Meta.")
+            .Validate(settings => string.IsNullOrWhiteSpace(settings.Evolution.Url) || IsHttpUrl(settings.Evolution.Url),
+                $"{MessagingSettings.SectionName}:Evolution:Url debe ser una URL absoluta http o https.")
+            .Validate(settings => IsHttpsUrl(settings.Meta.BaseUrl), $"{MessagingSettings.SectionName}:Meta:BaseUrl debe ser una URL absoluta https.")
             .Validate(settings => settings.TimeoutSeconds > 0, $"{MessagingSettings.SectionName}:TimeoutSeconds debe ser mayor que cero.")
             .ValidateOnStart();
 
@@ -33,9 +36,17 @@ public static partial class Configuration
 
         if (settings.IsConfigured)
         {
-            builder.Services.AddHttpClient(WhatsAppSecurityMessageSender.HttpClientName,
+            builder.Services.AddHttpClient(EvolutionSecurityMessageSender.HttpClientName,
                 client => client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds));
-            builder.Services.AddScoped<ISecurityMessageSender, WhatsAppSecurityMessageSender>();
+
+            if (settings.Provider == MessagingProvider.Meta)
+            {
+                builder.Services.AddScoped<ISecurityMessageSender, MetaSecurityMessageSender>();
+            }
+            else
+            {
+                builder.Services.AddScoped<ISecurityMessageSender, EvolutionSecurityMessageSender>();
+            }
         }
         else if (builder.Environment.IsDevelopment())
         {
@@ -51,4 +62,7 @@ public static partial class Configuration
 
     private static bool IsHttpsUrl(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    private static bool IsHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
 }

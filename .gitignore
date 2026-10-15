@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 # Claves privadas (firma de JWT): nunca van en el repositorio
 *.pem
+
+# Variables de entorno con secretos (la plantilla es .env.example)
+.env
