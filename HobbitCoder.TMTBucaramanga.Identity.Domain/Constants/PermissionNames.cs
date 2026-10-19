@@ -5,6 +5,6 @@ public static class PermissionNames
 {
     public const string ClaimType = "permission";
 
-    /// <summary>Designación para registrar asistentes nuevos (§7). No amplía el alcance de edición.</summary>
+    /// <summary>Designación para registrar asistentes nuevos. No amplía el alcance de edición.</summary>
     public const string RegisterAttendees = "RegisterAttendees";
 }

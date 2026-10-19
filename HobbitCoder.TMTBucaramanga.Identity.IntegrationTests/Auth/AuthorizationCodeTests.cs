@@ -31,6 +31,9 @@ public class AuthorizationCodeTests : IClassFixture<DatabaseApiFixture>
         return await _client.LoginAsync(account.UserName);
     }
 
+    /// <summary>
+    ///     El refresh token del cliente renueva para su propia audiencia.
+    /// </summary>
     [Fact]
     public async Task AuthorizeThenExchange_ReturnsClientTokensInTheSameIdentitySession()
     {
@@ -48,7 +51,6 @@ public class AuthorizationCodeTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(identityToken.Subject, sheepfoldToken.Subject);
         Assert.Equal(identityToken.GetClaim(JwtRegisteredClaimNames.Sid).Value, sheepfoldToken.GetClaim(JwtRegisteredClaimNames.Sid).Value);
 
-        // El refresh token del cliente renueva para su propia audiencia.
         var renewed = await _client.RefreshAsync(sheepfold.RefreshToken);
         Assert.Equal([IdentityApiFactory.SheepfoldAudience], new JsonWebToken(renewed.AccessToken).Audiences);
     }

@@ -1,4 +1,4 @@
-using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 using HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Contexts;
@@ -11,7 +11,7 @@ using System.Net;
 namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Account;
 
 /// <summary>
-/// Primer ingreso, recuperación y reinicio administrativo (§6, HU-01, HU-02, HU-03): la contraseña siempre la
+/// Primer ingreso, recuperación y reinicio administrativo: la contraseña siempre la
 /// crea el titular después de confirmar su identidad con un código enviado a su teléfono.
 /// </summary>
 public class AccountTests : IClassFixture<DatabaseApiFixture>
@@ -27,6 +27,9 @@ public class AccountTests : IClassFixture<DatabaseApiFixture>
 
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
+    /// <summary>
+    ///     Con teléfono o nombre de usuario.
+    /// </summary>
     [Fact]
     public async Task NewAccount_CannotSignInUntilItsHolderActivatesIt()
     {
@@ -44,7 +47,6 @@ public class AccountTests : IClassFixture<DatabaseApiFixture>
         using var activated = await _client.SendAsync(HttpMethod.Post, "/api/account/activation", null, account.ActivationBody(verificationToken));
         Assert.Equal(HttpStatusCode.NoContent, activated.StatusCode);
 
-        // Con teléfono o nombre de usuario (HU-02, casos 1 y 3).
         await _client.LoginAsync(account.PhoneNumber);
         await _client.LoginAsync(account.UserName);
         await _client.LoginAsync(account.PhoneNumber[3..]);
@@ -127,6 +129,9 @@ public class AccountTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(HttpStatusCode.BadRequest, confirm.StatusCode);
     }
 
+    /// <summary>
+    ///     El mismo token sigue sirviendo para completar la activación.
+    /// </summary>
     [Fact]
     public async Task Activation_RequiresTheCompleteProfile_AndLeavesTheAccountUnchangedWhenIncomplete()
     {
@@ -142,7 +147,6 @@ public class AccountTests : IClassFixture<DatabaseApiFixture>
         using var login = await _client.PostLoginAsync(account.UserName, AuthApi.Password);
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
 
-        // El mismo token sigue sirviendo para completar la activación.
         using var activated = await _client.SendAsync(HttpMethod.Post, "/api/account/activation", null, account.ActivationBody(verificationToken));
         Assert.Equal(HttpStatusCode.NoContent, activated.StatusCode);
     }

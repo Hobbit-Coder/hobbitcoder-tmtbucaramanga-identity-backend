@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Commands;
 
 /// <summary>
-/// El usuario autenticado actualiza su perfil (§5, "Mi perfil"). El rol, el estado y la designación para
+/// El usuario autenticado actualiza su perfil. El rol, el estado y la designación para
 /// registrar asistentes solo los cambia la administración.
 /// </summary>
 public class UpdateProfileCommand : IRequest, IProfileData

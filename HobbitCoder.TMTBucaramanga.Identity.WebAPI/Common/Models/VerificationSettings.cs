@@ -1,9 +1,8 @@
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Common.Models;
 
 /// <summary>
-/// Política de los códigos de seguridad (sección <see cref="SectionName"/>). El requerimiento no fija
-/// longitud, vigencia ni intentos: son valores configurables pendientes de contrato, con estos valores
-/// por defecto.
+/// Política de los códigos de seguridad (sección <see cref="SectionName"/>). La longitud, la vigencia y los intentos
+/// son valores configurables, con estos valores por defecto.
 /// </summary>
 public class VerificationSettings
 {

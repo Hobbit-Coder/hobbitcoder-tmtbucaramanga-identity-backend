@@ -10,6 +10,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public const int PhoneNumberMaxLength = 30;
     public const int InstagramMaxLength = 60;
 
+    /// <summary>
+    ///     Configura el mapeo de la entidad &lt;see cref="User"/&gt;.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///     Teléfono normalizado (+57...). Es un identificador de acceso: único entre las cuentas, incluidas las
+    ///     eliminadas lógicamente, igual que el usuario y el correo.
+    /// </para>
+    /// <para>
+    ///     El correo es opcional, pero si se registra identifica una sola cuenta.
+    /// </para>
+    /// </remarks>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.Property(user => user.FirstName)
@@ -32,15 +44,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.Instagram)
             .HasMaxLength(InstagramMaxLength);
 
-        // Teléfono normalizado (+57...). Es un identificador de acceso: único entre las cuentas, incluidas las
-        // eliminadas lógicamente, igual que el usuario y el correo.
         builder.Property(user => user.PhoneNumber)
             .HasMaxLength(PhoneNumberMaxLength);
 
         builder.HasIndex(user => user.PhoneNumber)
             .IsUnique();
 
-        // El correo es opcional (§5), pero si se registra identifica una sola cuenta.
         builder.HasIndex(user => user.NormalizedEmail)
             .HasDatabaseName("EmailIndex")
             .IsUnique();

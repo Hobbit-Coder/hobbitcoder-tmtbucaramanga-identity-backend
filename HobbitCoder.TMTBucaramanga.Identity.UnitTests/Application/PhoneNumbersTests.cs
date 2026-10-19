@@ -2,7 +2,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Utils;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.UnitTests.Application;
 
-/// <summary>El teléfono identifica la cuenta al ingresar (§6): se guarda y se busca siempre igual.</summary>
+/// <summary>El teléfono identifica la cuenta al ingresar: se guarda y se busca siempre igual.</summary>
 public class PhoneNumbersTests
 {
     [Theory]

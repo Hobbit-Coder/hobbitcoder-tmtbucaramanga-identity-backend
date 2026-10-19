@@ -10,7 +10,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Queries;
 
 /// <summary>
 /// Datos que la administración ya registró para la cuenta en activación, para que el titular complete solo
-/// lo que falta sin volver a escribir lo confirmado (S01). Exige el token de verificación vigente.
+/// lo que falta sin volver a escribir lo confirmado. Exige el token de verificación vigente.
 /// </summary>
 public class GetActivationProfileQuery : IRequest<UserResponse>
 {

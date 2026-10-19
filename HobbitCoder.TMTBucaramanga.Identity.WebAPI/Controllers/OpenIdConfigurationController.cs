@@ -29,8 +29,10 @@ public class OpenIdConfigurationController : ControllerBase
     [HttpGet]
     [ProducesResponseType<OpenIdConfigurationResponse>(StatusCodes.Status200OK)]
     public ActionResult<OpenIdConfigurationResponse> GetOpenIdConfiguration() =>
-        new OpenIdConfigurationResponse(
-            Issuer: _jwtSettings.Issuer,
-            JwksUri: _jwtSettings.Issuer + JsonWebKeySetController.Path,
-            IdTokenSigningAlgValuesSupported: [SecurityAlgorithms.RsaSha256]);
+        new OpenIdConfigurationResponse
+        {
+            Issuer = _jwtSettings.Issuer,
+            JwksUri = _jwtSettings.Issuer + JsonWebKeySetController.Path,
+            IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256]
+        };
 }

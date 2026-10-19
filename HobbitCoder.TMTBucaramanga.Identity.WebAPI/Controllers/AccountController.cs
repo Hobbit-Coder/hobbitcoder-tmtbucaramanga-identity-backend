@@ -1,4 +1,5 @@
 using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Queries;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
@@ -9,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
 /// <summary>
-/// Procesos de seguridad del titular (§6): confirmar identidad con un código por SMS o WhatsApp, activar la
+/// Procesos de seguridad del titular: confirmar identidad con un código por SMS o WhatsApp, activar la
 /// cuenta en el primer ingreso y recuperar el acceso creando una contraseña nueva. Son públicos: el titular
 /// todavía no tiene sesión.
 /// </summary>

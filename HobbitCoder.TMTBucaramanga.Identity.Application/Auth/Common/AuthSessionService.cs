@@ -1,8 +1,8 @@
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
+using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
-using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Common;
@@ -86,13 +86,24 @@ public sealed class AuthSessionService
                 .SetProperty(refreshToken => refreshToken.RevocationReason, reason), cancellationToken);
     }
 
+    /// <summary>
+    ///     Emite el token de acceso y la sesión de refresco del usuario.
+    /// </summary>
+    /// <remarks>
+    ///     El rol se lee en cada emisión: un cambio llega en el siguiente refresh.
+    /// </remarks>
     private async Task<AuthResponse> IssueAsync(
         User user, string audience, string sessionAudience, Guid familyId, RefreshToken? replacedToken, CancellationToken cancellationToken)
     {
-        // El rol se lee en cada emisión: un cambio llega en el siguiente refresh.
         var permissions = user.CanRegisterAttendees ? new[] { PermissionNames.RegisterAttendees } : [];
-        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest(
-            user.Id.ToString(), audience, [user.Role.ToString()], familyId.ToString(), permissions));
+        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest
+        {
+            Subject = user.Id.ToString(),
+            Audience = audience,
+            Roles = [user.Role.ToString()],
+            SessionId = familyId.ToString(),
+            Permissions = permissions
+        });
 
         var now = _timeProvider.GetUtcNow();
         var generated = _refreshTokenGenerator.Generate();

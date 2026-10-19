@@ -28,9 +28,14 @@ public class IdentityContext : IdentityUserContext<User, Guid>, IApplicationDbCo
         AccountAuditEntries = Set<AccountAuditEntry>();
     }
 
+    /// <summary>
+    ///     Configura el modelo de la base de datos de identidad.
+    /// </summary>
+    /// <remarks>
+    ///     Primero el modelo de ASP.NET Core Identity, para que las configuraciones propias lo ajusten.
+    /// </remarks>
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // Primero el modelo de ASP.NET Core Identity, para que las configuraciones propias lo ajusten.
         base.OnModelCreating(builder);
 
         builder.HasDefaultSchema(PersistenceConstants.Schema);

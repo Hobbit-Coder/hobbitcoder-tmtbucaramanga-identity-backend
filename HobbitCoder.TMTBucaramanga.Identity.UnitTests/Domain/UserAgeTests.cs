@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.UnitTests.Domain;
 
-/// <summary>Edad = años cumplidos a partir de la fecha de nacimiento (§5, HU-01).</summary>
+/// <summary>Edad = años cumplidos a partir de la fecha de nacimiento.</summary>
 public class UserAgeTests
 {
     [Theory]

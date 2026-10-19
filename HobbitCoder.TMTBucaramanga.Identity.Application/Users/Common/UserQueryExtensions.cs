@@ -10,7 +10,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 public static class UserQueryExtensions
 {
     /// <summary>
-    /// Busca la cuenta de un identificador de acceso (§6): correo si contiene <c>@</c>, teléfono si solo
+    /// Busca la cuenta de un identificador de acceso: correo si contiene <c>@</c>, teléfono si solo
     /// tiene dígitos y separadores, y nombre de usuario en otro caso. Un correo no registrado no identifica
     /// ninguna cuenta.
     /// </summary>

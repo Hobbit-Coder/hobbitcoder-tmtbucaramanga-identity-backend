@@ -20,7 +20,7 @@ public class RefreshTokenGenerator : IRefreshTokenGenerator
     {
         var token = OpaqueToken.Create();
 
-        return new GeneratedRefreshToken(token, ComputeHash(token));
+        return new GeneratedRefreshToken { Token = token, TokenHash = ComputeHash(token) };
     }
 
     public string ComputeHash(string token) => OpaqueToken.ComputeHash(token);

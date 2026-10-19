@@ -16,6 +16,6 @@ public static class RoleNames
     /// <summary>Aplicaciones (no personas) autenticadas con credenciales de servicio, como la API de Sheepfold.</summary>
     public const string Service = "Service";
 
-    /// <summary>Quienes administran cuentas (§4.1 y §4.5 del requerimiento).</summary>
+    /// <summary>Quienes administran cuentas.</summary>
     public const string AccountManagers = Admin + "," + Director;
 }

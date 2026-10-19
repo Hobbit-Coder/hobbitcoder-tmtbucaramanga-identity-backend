@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
 
 /// <summary>
-/// Termina el primer ingreso (§6, HU-01): con la identidad ya confirmada, el titular crea su contraseña y
+/// Termina el primer ingreso: con la identidad ya confirmada, el titular crea su contraseña y
 /// completa su perfil. Contraseña y perfil se guardan juntos: si algo falla, la cuenta queda como estaba (sin contraseña).
 /// Después puede ingresar con su teléfono, usuario o correo si lo registró.
 /// </summary>

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -66,9 +64,11 @@ public sealed class SheepfoldConsumerFixture : IAsyncLifetime
         _consumer = builder.Build();
         _consumer.UseAuthentication();
         _consumer.UseAuthorization();
-        _consumer.MapGet(WhoAmIPath, (ClaimsPrincipal user) => new WhoAmIResponse(
-                user.FindFirstValue(ClaimTypes.NameIdentifier),
-                [.. user.FindAll(ClaimTypes.Role).Select(claim => claim.Value)]))
+        _consumer.MapGet(WhoAmIPath, (ClaimsPrincipal user) => new WhoAmIResponse
+        {
+            NameIdentifier = user.FindFirstValue(ClaimTypes.NameIdentifier),
+            Roles = [.. user.FindAll(ClaimTypes.Role).Select(claim => claim.Value)]
+        })
             .RequireAuthorization();
 
         await _consumer.StartAsync();
@@ -89,4 +89,8 @@ public sealed class SheepfoldConsumerFixture : IAsyncLifetime
 }
 
 /// <summary>Lo que ve la API consumidora del usuario autenticado, con los claims ya mapeados.</summary>
-public sealed record WhoAmIResponse(string? NameIdentifier, IReadOnlyList<string> Roles);
+public sealed class WhoAmIResponse
+{
+    public string? NameIdentifier { get; set; }
+    public required IReadOnlyList<string> Roles { get; set; }
+}

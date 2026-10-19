@@ -1,4 +1,4 @@
-using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,9 +36,14 @@ public sealed class DatabaseApiFixture : IAsyncLifetime
 
     public HttpClient CreateClient() => Factory.CreateIssuerClient();
 
+    /// <summary>
+    ///     Inicializa el fixture arrancando el host de pruebas.
+    /// </summary>
+    /// <remarks>
+    ///     Arranca el host: el bootstrap del administrador corre aquí.
+    /// </remarks>
     public ValueTask InitializeAsync()
     {
-        // Arranca el host: el bootstrap del administrador corre aquí.
         _ = Factory.Server;
         return ValueTask.CompletedTask;
     }
@@ -105,7 +110,7 @@ public sealed class TestAccount(string userName, string phoneNumber, string? ema
     public string? Email { get; } = email;
     public string Password { get; set; } = AuthApi.Password;
 
-    /// <summary>Perfil completo para la activación (§5): todos los datos menos el correo, que es opcional.</summary>
+    /// <summary>Perfil completo para la activación: todos los datos menos el correo, que es opcional.</summary>
     public object ActivationBody(string verificationToken, string? instagram = "ana.ejemplo") => new
     {
         verificationToken,

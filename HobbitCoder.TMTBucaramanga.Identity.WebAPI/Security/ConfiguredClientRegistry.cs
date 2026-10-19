@@ -14,7 +14,7 @@ public class ConfiguredClientRegistry : IClientRegistry
     {
         _clients = options.Value.Clients.ToDictionary(
             client => client.ClientId,
-            client => new RegisteredClient(client.ClientId, client.Audience, [.. client.RedirectUris]),
+            client => new RegisteredClient { ClientId = client.ClientId, Audience = client.Audience, RedirectUris = [.. client.RedirectUris] },
             StringComparer.Ordinal);
     }
 

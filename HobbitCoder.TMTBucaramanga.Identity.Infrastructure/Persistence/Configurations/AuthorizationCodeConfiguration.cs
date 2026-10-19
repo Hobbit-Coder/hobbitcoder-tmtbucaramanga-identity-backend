@@ -12,6 +12,18 @@ public class AuthorizationCodeConfiguration : IEntityTypeConfiguration<Authoriza
     /// <summary>Base64url de un SHA-256.</summary>
     private const int CodeChallengeLength = 43;
 
+    /// <summary>
+    ///     Configura el mapeo de la entidad &lt;see cref="AuthorizationCode"/&gt;.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///     Dos canjes simultáneos del mismo código no pueden tener éxito los dos: el segundo falla con
+    ///     DbUpdateConcurrencyException al encontrarlo ya usado.
+    /// </para>
+    /// <para>
+    ///     Mismo filtro que User (borrado lógico): los códigos de un usuario eliminado no se pueden canjear.
+    /// </para>
+    /// </remarks>
     public void Configure(EntityTypeBuilder<AuthorizationCode> builder)
     {
         builder.Property(authorizationCode => authorizationCode.CodeHash)
@@ -35,8 +47,6 @@ public class AuthorizationCodeConfiguration : IEntityTypeConfiguration<Authoriza
             .HasMaxLength(2048)
             .IsRequired();
 
-        // Dos canjes simultáneos del mismo código no pueden tener éxito los dos: el segundo falla con
-        // DbUpdateConcurrencyException al encontrarlo ya usado.
         builder.Property(authorizationCode => authorizationCode.ConsumedAt)
             .IsConcurrencyToken();
 
@@ -45,7 +55,6 @@ public class AuthorizationCodeConfiguration : IEntityTypeConfiguration<Authoriza
             .HasForeignKey(authorizationCode => authorizationCode.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Mismo filtro que User (borrado lógico): los códigos de un usuario eliminado no se pueden canjear.
         builder.HasQueryFilter(authorizationCode => !authorizationCode.User.IsDeleted);
     }
 }

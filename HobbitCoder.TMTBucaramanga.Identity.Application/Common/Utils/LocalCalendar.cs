@@ -12,6 +12,12 @@ public static class LocalCalendar
         return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), Bogota).DateTime);
     }
 
+    /// <summary>
+    ///     Obtiene la zona horaria de Bogotá.
+    /// </summary>
+    /// <remarks>
+    ///     Imágenes de contenedor sin base de zonas horarias: Colombia no tiene horario de verano.
+    /// </remarks>
     private static TimeZoneInfo FindBogota()
     {
         try
@@ -20,7 +26,6 @@ public static class LocalCalendar
         }
         catch (TimeZoneNotFoundException)
         {
-            // Imágenes de contenedor sin base de zonas horarias: Colombia no tiene horario de verano.
             return TimeZoneInfo.CreateCustomTimeZone("America/Bogota", TimeSpan.FromHours(-5), "America/Bogota", "America/Bogota");
         }
     }

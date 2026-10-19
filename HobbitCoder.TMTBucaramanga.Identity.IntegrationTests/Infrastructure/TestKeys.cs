@@ -16,13 +16,16 @@ public static class TestKeys
     public static TestRsaKey Previous => PreviousKey.Value;
 }
 
-public sealed record TestRsaKey(string PrivateKeyPem, string PublicKeyPem)
+public sealed class TestRsaKey
 {
+    public required string PrivateKeyPem { get; set; }
+    public required string PublicKeyPem { get; set; }
+
     public static TestRsaKey Create(int keySizeInBits)
     {
         using var rsa = RSA.Create(keySizeInBits);
 
-        return new TestRsaKey(rsa.ExportPkcs8PrivateKeyPem(), rsa.ExportSubjectPublicKeyInfoPem());
+        return new TestRsaKey { PrivateKeyPem = rsa.ExportPkcs8PrivateKeyPem(), PublicKeyPem = rsa.ExportSubjectPublicKeyInfoPem() };
     }
 
     public SigningCredentials CreateSigningCredentials(string keyId)

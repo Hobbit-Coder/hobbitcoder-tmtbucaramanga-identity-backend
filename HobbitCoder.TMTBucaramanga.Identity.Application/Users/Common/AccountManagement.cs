@@ -12,7 +12,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 public static class AccountManagement
 {
     /// <summary>
-    /// Director y administrador administran cuentas (§4.1, §4.5). El rol Administrador está fuera de la
+    /// Director y administrador administran cuentas. El rol Administrador está fuera de la
     /// jerarquía ministerial: solo otro administrador lo asigna o administra esas cuentas.
     /// </summary>
     /// <exception cref="ForbiddenAccessException">El actor no puede administrar cuentas con ese rol.</exception>
@@ -57,7 +57,7 @@ public static class AccountManagement
 
     /// <summary>
     /// Invalida la contraseña y el security stamp: sin contraseña la cuenta no puede ingresar hasta que su
-    /// titular cree una nueva confirmando su identidad (§6).
+    /// titular cree una nueva confirmando su identidad.
     /// </summary>
     public static void ClearPassword(this User user)
     {

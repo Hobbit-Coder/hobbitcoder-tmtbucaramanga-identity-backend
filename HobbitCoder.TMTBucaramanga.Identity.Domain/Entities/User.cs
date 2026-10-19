@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 namespace HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 
 /// <summary>
-/// Cuenta de una persona que ingresa a la plataforma (§3.1 y §5). La crea la administración sin
+/// Cuenta de una persona que ingresa a la plataforma. La crea la administración sin
 /// contraseña: el titular confirma su identidad, crea su contraseña y completa su perfil en el primer
 /// ingreso (<see cref="ActivatedAt"/>).
 /// </summary>
@@ -24,7 +24,7 @@ public class User : IdentityUser<Guid>, ISoftDeleteableEntity
     public required UserRole Role { get; set; }
     public required bool IsActive { get; set; }
 
-    /// <summary>Designado para registrar asistentes nuevos (§7). No amplía su alcance de edición.</summary>
+    /// <summary>Designado para registrar asistentes nuevos. No amplía su alcance de edición.</summary>
     public bool CanRegisterAttendees { get; set; }
 
     /// <summary>Momento en que el titular completó su primer ingreso; antes no puede iniciar sesión.</summary>

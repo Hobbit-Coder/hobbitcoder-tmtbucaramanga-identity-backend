@@ -49,6 +49,17 @@ public class RefreshSessionCommandHandler : IRequestHandler<RefreshSessionComman
         _logger = logger;
     }
 
+    /// <summary>
+    ///     Atiende &lt;see cref="RefreshSessionCommand"/&gt;.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///     La consulta aplica el filtro de borrado lógico: un usuario eliminado no aparece.
+    /// </para>
+    /// <para>
+    ///     Otra petición rotó el mismo token entre la lectura y el guardado.
+    /// </para>
+    /// </remarks>
     public async Task<AuthResponse> Handle(RefreshSessionCommand request, CancellationToken cancellationToken = default)
     {
         var tokenHash = _refreshTokenGenerator.ComputeHash(request.RefreshToken);
@@ -76,7 +87,6 @@ public class RefreshSessionCommandHandler : IRequestHandler<RefreshSessionComman
             throw new AuthenticationFailedException(InvalidRefreshTokenMessage);
         }
 
-        // La consulta aplica el filtro de borrado lógico: un usuario eliminado no aparece.
         var user = await _dbContext.Users.FirstOrDefaultAsync(user => user.Id == refreshToken.UserId, cancellationToken);
 
         if (user is null || !user.IsActive)
@@ -92,7 +102,6 @@ public class RefreshSessionCommandHandler : IRequestHandler<RefreshSessionComman
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            // Otra petición rotó el mismo token entre la lectura y el guardado.
             throw new AuthenticationFailedException(InvalidRefreshTokenMessage, exception);
         }
     }

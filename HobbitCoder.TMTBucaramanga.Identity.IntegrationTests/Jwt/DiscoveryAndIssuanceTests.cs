@@ -88,7 +88,7 @@ public class DiscoveryAndIssuanceTests : IClassFixture<IdentityApiFactory>
         var jwks = await GetJsonAsync(_factory.CreateIssuerClient(), JwksPath);
         var issuer = _factory.Services.GetRequiredService<IAccessTokenIssuer>();
 
-        var accessToken = issuer.Issue(new AccessTokenRequest("usuario-123", IdentityApiFactory.SheepfoldAudience, ["Admin"]));
+        var accessToken = issuer.Issue(new AccessTokenRequest { Subject = "usuario-123", Audience = IdentityApiFactory.SheepfoldAudience, Roles = ["Admin"] });
         var token = new JsonWebToken(accessToken.Token);
 
         Assert.Equal("RS256", token.Alg);
@@ -111,7 +111,7 @@ public class DiscoveryAndIssuanceTests : IClassFixture<IdentityApiFactory>
     public void IssuedTokens_HaveUniqueJti()
     {
         var issuer = _factory.Services.GetRequiredService<IAccessTokenIssuer>();
-        var request = new AccessTokenRequest("usuario-123", IdentityApiFactory.SheepfoldAudience, []);
+        var request = new AccessTokenRequest { Subject = "usuario-123", Audience = IdentityApiFactory.SheepfoldAudience, Roles = [] };
 
         var first = new JsonWebToken(issuer.Issue(request).Token);
         var second = new JsonWebToken(issuer.Issue(request).Token);
@@ -126,7 +126,7 @@ public class DiscoveryAndIssuanceTests : IClassFixture<IdentityApiFactory>
         var issuer = _factory.Services.GetRequiredService<IAccessTokenIssuer>();
 
         Assert.Throws<ArgumentException>(() =>
-            issuer.Issue(new AccessTokenRequest("usuario-123", "HobbitCoder.TMTBucaramanga.NoRegistrada", [])));
+            issuer.Issue(new AccessTokenRequest { Subject = "usuario-123", Audience = "HobbitCoder.TMTBucaramanga.NoRegistrada", Roles = [] }));
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class DiscoveryAndIssuanceTests : IClassFixture<IdentityApiFactory>
         var issuer = _factory.Services.GetRequiredService<IAccessTokenIssuer>();
 
         Assert.Throws<ArgumentException>(() =>
-            issuer.Issue(new AccessTokenRequest(" ", IdentityApiFactory.SheepfoldAudience, [])));
+            issuer.Issue(new AccessTokenRequest { Subject = " ", Audience = IdentityApiFactory.SheepfoldAudience, Roles = [] }));
     }
 
     private static async Task<JsonElement> GetJsonAsync(HttpClient client, string path)

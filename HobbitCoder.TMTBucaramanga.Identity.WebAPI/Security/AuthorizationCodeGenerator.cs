@@ -12,7 +12,7 @@ public class AuthorizationCodeGenerator : IAuthorizationCodeGenerator
     {
         var code = OpaqueToken.Create();
 
-        return new GeneratedAuthorizationCode(code, ComputeHash(code));
+        return new GeneratedAuthorizationCode { Code = code, CodeHash = ComputeHash(code) };
     }
 
     public string ComputeHash(string code) => OpaqueToken.ComputeHash(code);

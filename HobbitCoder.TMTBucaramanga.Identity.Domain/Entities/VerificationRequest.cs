@@ -4,7 +4,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 namespace HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 
 /// <summary>
-/// Confirmación de identidad del titular mediante un código enviado a su teléfono (§6). Se confirma con el
+/// Confirmación de identidad del titular mediante un código enviado a su teléfono. Se confirma con el
 /// código y entrega un token de verificación de un solo uso con el que el titular crea su contraseña.
 /// </summary>
 /// <remarks>Solo se guardan hashes del código y del token.</remarks>

@@ -1,4 +1,5 @@
 using FluentValidation;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Mappings;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
@@ -8,7 +9,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Queries;
 
 /// <summary>
-/// Auditoría de cuentas (§25): solo la consultan los directores, junto con la auditoría ministerial de
+/// Auditoría de cuentas: solo la consultan los directores, junto con la auditoría ministerial de
 /// Sheepfold. Es de solo lectura.
 /// </summary>
 public class GetAccountAuditQuery : IRequest<PagedResult<AccountAuditEntryResponse>>
@@ -19,18 +20,6 @@ public class GetAccountAuditQuery : IRequest<PagedResult<AccountAuditEntryRespon
     public string? ActorUserId { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 20;
-}
-
-public class AccountAuditEntryResponse
-{
-    public required Guid Id { get; set; }
-    public required DateTime OccurredAt { get; set; }
-    public required string ActorUserId { get; set; }
-    public required AccountAuditAction Action { get; set; }
-    public required Guid TargetUserId { get; set; }
-    public required string TargetName { get; set; }
-    public string? Before { get; set; }
-    public string? After { get; set; }
 }
 
 public class GetAccountAuditQueryHandler : IRequestHandler<GetAccountAuditQuery, PagedResult<AccountAuditEntryResponse>>

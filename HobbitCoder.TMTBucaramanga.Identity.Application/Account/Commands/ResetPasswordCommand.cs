@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
 
 /// <summary>
-/// Recuperación del acceso (§6, HU-03): con la identidad confirmada, el titular crea una contraseña nueva.
+/// Recuperación del acceso: con la identidad confirmada, el titular crea una contraseña nueva.
 /// Sirve también cuando la administración solicitó el reinicio. Se cierran las sesiones anteriores.
 /// </summary>
 public class ResetPasswordCommand : IRequest

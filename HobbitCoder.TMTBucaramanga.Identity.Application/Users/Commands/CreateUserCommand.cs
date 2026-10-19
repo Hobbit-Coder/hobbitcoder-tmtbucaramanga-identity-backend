@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Commands;
 
 /// <summary>
-/// La administración (director o administrador) registra una cuenta (§4, §5). Se crea <b>sin contraseña</b>:
+/// La administración (director o administrador) registra una cuenta. Se crea <b>sin contraseña</b>:
 /// el titular la activa en su primer ingreso confirmando su identidad con el teléfono o el nombre de usuario.
 /// </summary>
 public class CreateUserCommand : IRequest<Guid>
@@ -47,6 +47,12 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Guid>
         _timeProvider = timeProvider;
     }
 
+    /// <summary>
+    ///     Atiende &lt;see cref="CreateUserCommand"/&gt;.
+    /// </summary>
+    /// <remarks>
+    ///     Sin contraseña: solo el titular la crea.
+    /// </remarks>
     public async Task<Guid> Handle(CreateUserCommand request, CancellationToken cancellationToken = default)
     {
         _currentUserService.EnsureCanManageRole(request.Role);
@@ -55,7 +61,6 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Guid>
         var email = request.Email.EmptyAsNull();
         await _dbContext.EnsureIdentifiersAvailableAsync(_normalizer, request.UserName, phoneNumber, email, exceptUserId: null, cancellationToken);
 
-        // Sin contraseña: solo el titular la crea (§6).
         var user = new User
         {
             Id = Guid.CreateVersion7(),

@@ -111,6 +111,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(IdentityApiFactory.IdentityAudience, stored.Audience);
     }
 
+    /// <summary>
+    ///     La reutilización revocó toda la sesión, incluido el token legítimo más reciente.
+    /// </summary>
     [Fact]
     public async Task Refresh_RotatesTokens_AndReusingARotatedTokenRevokesTheSession()
     {
@@ -125,7 +128,6 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         using var reused = await _client.PostRefreshAsync(first.RefreshToken);
         Assert.Equal(HttpStatusCode.Unauthorized, reused.StatusCode);
 
-        // La reutilización revocó toda la sesión, incluido el token legítimo más reciente.
         using var afterReuse = await _client.PostRefreshAsync(second.RefreshToken);
         Assert.Equal(HttpStatusCode.Unauthorized, afterReuse.StatusCode);
 
@@ -155,6 +157,10 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         }
     }
 
+    /// <summary>
+    ///     Un token para Sheepfold no sirve en los endpoints de Identity.
+    ///     La sesión conserva su audiencia: sin indicar otra, el siguiente refresh vuelve a ser para Identity.
+    /// </summary>
     [Fact]
     public async Task Refresh_ForAnotherRegisteredAudience_IssuesAccessTokenForThatApi()
     {
@@ -166,11 +172,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
 
         Assert.Equal([IdentityApiFactory.SheepfoldAudience], new JsonWebToken(sheepfoldTokens.AccessToken).Audiences);
 
-        // Un token para Sheepfold no sirve en los endpoints de Identity.
         using var me = await _client.SendAsync(HttpMethod.Get, "/api/auth/me", sheepfoldTokens.AccessToken);
         Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
 
-        // La sesión conserva su audiencia: sin indicar otra, el siguiente refresh vuelve a ser para Identity.
         var next = await _client.RefreshAsync(sheepfoldTokens.RefreshToken);
         Assert.Equal([IdentityApiFactory.IdentityAudience], new JsonWebToken(next.AccessToken).Audiences);
     }
@@ -183,6 +187,9 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    ///     Solo se cierra esa sesión: las demás del usuario siguen activas.
+    /// </summary>
     [Fact]
     public async Task Logout_RevokesTheSession_AndIsIdempotent()
     {
@@ -202,7 +209,6 @@ public class AuthTests : IClassFixture<DatabaseApiFixture>
         using var refresh = await _client.PostRefreshAsync(tokens.RefreshToken);
         Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
 
-        // Solo se cierra esa sesión: las demás del usuario siguen activas.
         await _client.RefreshAsync(otherSession.RefreshToken);
     }
 

@@ -1,4 +1,5 @@
 using FluentValidation;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
 
 /// <summary>
-/// El titular pide un código para confirmar su identidad (§6): para activar su cuenta (primer ingreso) o
+/// El titular pide un código para confirmar su identidad: para activar su cuenta (primer ingreso) o
 /// para recuperar el acceso / crear la contraseña después de un reinicio. El código se envía solo al
 /// teléfono registrado de la cuenta, por SMS o WhatsApp.
 /// </summary>
@@ -21,14 +22,12 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
 /// </remarks>
 public class StartVerificationCommand : IRequest<StartVerificationResponse>
 {
-    /// <summary>Teléfono o nombre de usuario (el correo no sirve para el primer ingreso, §6).</summary>
+    /// <summary>Teléfono o nombre de usuario (el correo no sirve para el primer ingreso).</summary>
     public required string Identifier { get; set; }
 
     public required VerificationChannel Channel { get; set; }
     public required VerificationPurpose Purpose { get; set; }
 }
-
-public sealed record StartVerificationResponse(Guid VerificationId);
 
 public class StartVerificationCommandHandler : IRequestHandler<StartVerificationCommand, StartVerificationResponse>
 {
@@ -64,7 +63,7 @@ public class StartVerificationCommandHandler : IRequestHandler<StartVerification
         if (user is null || !CanStart(user, request.Purpose))
         {
             _logger.LogInformation("Verificación no iniciada: el identificador no corresponde a una cuenta para el proceso {Purpose}.", request.Purpose);
-            return new StartVerificationResponse(Guid.CreateVersion7());
+            return new StartVerificationResponse { VerificationId = Guid.CreateVersion7() };
         }
 
         var code = _secrets.CreateCode();
@@ -84,7 +83,7 @@ public class StartVerificationCommandHandler : IRequestHandler<StartVerification
 
         await _messageSender.SendVerificationCodeAsync(user.PhoneNumber!, request.Channel, request.Purpose, code, cancellationToken);
 
-        return new StartVerificationResponse(verification.Id);
+        return new StartVerificationResponse { VerificationId = verification.Id };
     }
 
     /// <summary>

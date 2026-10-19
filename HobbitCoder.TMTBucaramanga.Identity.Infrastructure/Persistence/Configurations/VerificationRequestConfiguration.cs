@@ -9,6 +9,12 @@ public class VerificationRequestConfiguration : IEntityTypeConfiguration<Verific
     /// <summary>SHA-256 en hexadecimal.</summary>
     private const int HashLength = 64;
 
+    /// <summary>
+    ///     Configura el mapeo de la entidad &lt;see cref="VerificationRequest"/&gt;.
+    /// </summary>
+    /// <remarks>
+    ///     Dos confirmaciones o dos usos simultáneos del mismo token no pueden tener éxito los dos.
+    /// </remarks>
     public void Configure(EntityTypeBuilder<VerificationRequest> builder)
     {
         builder.Property(request => request.Purpose).HasConversion<string>().HasMaxLength(20);
@@ -26,7 +32,6 @@ public class VerificationRequestConfiguration : IEntityTypeConfiguration<Verific
         builder.HasIndex(request => request.ConfirmationTokenHash)
             .IsUnique();
 
-        // Dos confirmaciones o dos usos simultáneos del mismo token no pueden tener éxito los dos.
         builder.Property(request => request.ConfirmedAt).IsConcurrencyToken();
         builder.Property(request => request.CompletedAt).IsConcurrencyToken();
         builder.Property(request => request.FailedAttempts).IsConcurrencyToken();

@@ -20,6 +20,9 @@ public static class Configuration
     /// autenticación de la plataforma es con JWT y el rol es un atributo de la cuenta. La unicidad del correo
     /// (opcional) y del teléfono la comprueban los comandos y los índices únicos de la base.
     /// </para>
+    /// <para>
+    ///     RequireUniqueEmail exigiría correo a todas las cuentas; en TMT es opcional.
+    /// </para>
     /// </remarks>
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder)
     {
@@ -28,7 +31,6 @@ public static class Configuration
 
         builder.Services.AddIdentityCore<User>(options =>
             {
-                // RequireUniqueEmail exigiría correo a todas las cuentas; en TMT es opcional (§5).
                 options.User.RequireUniqueEmail = false;
 
                 options.Password.RequiredLength = 8;

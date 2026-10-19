@@ -1,3 +1,4 @@
+using HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Queries;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
-/// <summary>Auditoría de cuentas (§25). Solo directores; el administrador no consulta auditoría ministerial.</summary>
+/// <summary>Auditoría de cuentas. Solo directores; el administrador no consulta auditoría ministerial.</summary>
 [Route("api/[controller]")]
 [ApiController]
 [Authorize(Roles = RoleNames.Director)]

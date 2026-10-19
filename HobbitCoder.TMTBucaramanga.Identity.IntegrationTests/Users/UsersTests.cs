@@ -1,5 +1,5 @@
-using HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Queries;
-using HobbitCoder.TMTBucaramanga.Identity.Application.AccountDirectory.Queries;
+using HobbitCoder.TMTBucaramanga.Identity.Application.AccountDirectory.Common;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Audit.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Constants;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
@@ -11,7 +11,7 @@ using System.Net.Http.Json;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.IntegrationTests.Users;
 
-/// <summary>Administración de cuentas (HU-03), directorio para Sheepfold y auditoría de cuentas (HU-27).</summary>
+/// <summary>Administración de cuentas, directorio para Sheepfold y auditoría de cuentas.</summary>
 public class UsersTests : IClassFixture<DatabaseApiFixture>
 {
     private readonly DatabaseApiFixture _fixture;
@@ -81,6 +81,9 @@ public class UsersTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    ///     Sin contraseña nadie puede entrar con esa cuenta hasta que su titular la active.
+    /// </summary>
     [Fact]
     public async Task CreateUser_RegistersTheAccountWithoutPassword_ThenGetById()
     {
@@ -100,7 +103,6 @@ public class UsersTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(AccessStatus.PendingActivation, user.AccessStatus);
         Assert.NotNull(user.Age);
 
-        // Sin contraseña nadie puede entrar con esa cuenta hasta que su titular la active.
         using var login = await _client.PostLoginAsync(userName, AuthApi.Password);
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
     }
@@ -193,6 +195,9 @@ public class UsersTests : IClassFixture<DatabaseApiFixture>
         Assert.Contains(refreshed.Claims, claim => claim.Type == PermissionNames.ClaimType && claim.Value == PermissionNames.RegisterAttendees);
     }
 
+    /// <summary>
+    ///     Con la contraseña correcta se informa que el acceso no está disponible; si no, respuesta genérica.
+    /// </summary>
     [Fact]
     public async Task Deactivation_RejectsSignIn_AndClosesSessions_ButKeepsTheAccount()
     {
@@ -220,7 +225,6 @@ public class UsersTests : IClassFixture<DatabaseApiFixture>
         using var login = await _client.PostLoginAsync(account.UserName, AuthApi.Password);
         using var refresh = await _client.PostRefreshAsync(tokens.RefreshToken);
         using var wrongPassword = await _client.PostLoginAsync(account.UserName, "Otra#Clave123");
-        // Con la contraseña correcta se informa que el acceso no está disponible (HU-02); si no, respuesta genérica.
         Assert.Equal(HttpStatusCode.Forbidden, login.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, wrongPassword.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
@@ -342,5 +346,8 @@ public class UsersTests : IClassFixture<DatabaseApiFixture>
         Assert.All(entries, entry => Assert.DoesNotContain("password", (entry.After ?? string.Empty).ToLowerInvariant()));
     }
 
-    private sealed record ServiceTokenBody(string AccessToken);
+    internal sealed class ServiceTokenBody
+    {
+        public required string AccessToken { get; set; }
+    }
 }

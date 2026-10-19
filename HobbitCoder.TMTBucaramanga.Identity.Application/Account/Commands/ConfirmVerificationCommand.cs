@@ -1,5 +1,6 @@
 using FluentValidation;
 using FluentValidation.Results;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Account.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -20,8 +21,6 @@ public class ConfirmVerificationCommand : IRequest<ConfirmVerificationResponse>
     public required string Code { get; set; }
 }
 
-public sealed record ConfirmVerificationResponse(string VerificationToken);
-
 public class ConfirmVerificationCommandHandler : IRequestHandler<ConfirmVerificationCommand, ConfirmVerificationResponse>
 {
     public const string InvalidCodeMessage = "The code is invalid or expired.";
@@ -37,6 +36,12 @@ public class ConfirmVerificationCommandHandler : IRequestHandler<ConfirmVerifica
         _timeProvider = timeProvider;
     }
 
+    /// <summary>
+    ///     Atiende &lt;see cref="ConfirmVerificationCommand"/&gt;.
+    /// </summary>
+    /// <remarks>
+    ///     Otra petición confirmó o falló con la misma solicitud al mismo tiempo.
+    /// </remarks>
     public async Task<ConfirmVerificationResponse> Handle(ConfirmVerificationCommand request, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -62,11 +67,10 @@ public class ConfirmVerificationCommandHandler : IRequestHandler<ConfirmVerifica
             verification.ConfirmationTokenHash = _secrets.ComputeHash(token);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            return new ConfirmVerificationResponse(token);
+            return new ConfirmVerificationResponse { VerificationToken = token };
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            // Otra petición confirmó o falló con la misma solicitud al mismo tiempo.
             throw new ValidationException(InvalidCodeMessage, exception);
         }
     }

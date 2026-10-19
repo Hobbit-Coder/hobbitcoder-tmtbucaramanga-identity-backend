@@ -16,7 +16,7 @@ public sealed class CapturingSecurityMessageSender : ISecurityMessageSender
 
     public Task SendVerificationCodeAsync(string phoneNumber, VerificationChannel channel, VerificationPurpose purpose, string code, CancellationToken cancellationToken)
     {
-        _messages.Enqueue(new SentSecurityMessage(phoneNumber, channel, purpose, code));
+        _messages.Enqueue(new SentSecurityMessage { PhoneNumber = phoneNumber, Channel = channel, Purpose = purpose, Code = code });
         return Task.CompletedTask;
     }
 
@@ -25,4 +25,10 @@ public sealed class CapturingSecurityMessageSender : ISecurityMessageSender
         _messages.Last(message => message.PhoneNumber == phoneNumber);
 }
 
-public sealed record SentSecurityMessage(string PhoneNumber, VerificationChannel Channel, VerificationPurpose Purpose, string Code);
+public sealed class SentSecurityMessage
+{
+    public required string PhoneNumber { get; set; }
+    public required VerificationChannel Channel { get; set; }
+    public required VerificationPurpose Purpose { get; set; }
+    public required string Code { get; set; }
+}

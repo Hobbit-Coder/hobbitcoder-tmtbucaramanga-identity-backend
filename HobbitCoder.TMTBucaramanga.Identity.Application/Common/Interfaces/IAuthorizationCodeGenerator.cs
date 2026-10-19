@@ -14,6 +14,11 @@ public interface IAuthorizationCodeGenerator
     string ComputeHash(string code);
 }
 
-/// <param name="Code">Valor opaco que recibe el cliente.</param>
-/// <param name="CodeHash">Hash que se persiste.</param>
-public sealed record GeneratedAuthorizationCode(string Code, string CodeHash);
+public sealed class GeneratedAuthorizationCode
+{
+    /// <summary>Valor opaco que recibe el cliente.</summary>
+    public required string Code { get; set; }
+
+    /// <summary>Hash que se persiste.</summary>
+    public required string CodeHash { get; set; }
+}

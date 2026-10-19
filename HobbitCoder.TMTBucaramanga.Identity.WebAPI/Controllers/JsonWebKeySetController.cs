@@ -27,18 +27,20 @@ public class JsonWebKeySetController : ControllerBase
     [HttpGet]
     [ProducesResponseType<JsonWebKeySetResponse>(StatusCodes.Status200OK)]
     public ActionResult<JsonWebKeySetResponse> GetJsonWebKeySet() =>
-        new JsonWebKeySetResponse([.. _signingKeyStore.PublishedKeys.Select(ToPublicJsonWebKey)]);
+        new JsonWebKeySetResponse { Keys = [.. _signingKeyStore.PublishedKeys.Select(ToPublicJsonWebKey)] };
 
     private static PublicJsonWebKey ToPublicJsonWebKey(RsaSecurityKey key)
     {
         var parameters = key.Rsa.ExportParameters(includePrivateParameters: false);
 
-        return new PublicJsonWebKey(
-            Kty: JsonWebAlgorithmsKeyTypes.RSA,
-            Use: JsonWebKeyUseNames.Sig,
-            Alg: SecurityAlgorithms.RsaSha256,
-            Kid: key.KeyId,
-            N: Base64UrlEncoder.Encode(parameters.Modulus),
-            E: Base64UrlEncoder.Encode(parameters.Exponent));
+        return new PublicJsonWebKey
+        {
+            Kty = JsonWebAlgorithmsKeyTypes.RSA,
+            Use = JsonWebKeyUseNames.Sig,
+            Alg = SecurityAlgorithms.RsaSha256,
+            Kid = key.KeyId,
+            N = Base64UrlEncoder.Encode(parameters.Modulus),
+            E = Base64UrlEncoder.Encode(parameters.Exponent)
+        };
     }
 }

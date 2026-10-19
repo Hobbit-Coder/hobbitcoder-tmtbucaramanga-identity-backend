@@ -31,6 +31,12 @@ public class JwtAccessTokenIssuer : IAccessTokenIssuer
         _timeProvider = timeProvider;
     }
 
+    /// <summary>
+    ///     Emite un token de acceso firmado.
+    /// </summary>
+    /// <remarks>
+    ///     exp, iat y nbf van en segundos: se trunca aquí para que ExpiresAt coincida con el claim exp.
+    /// </remarks>
     public AccessToken Issue(AccessTokenRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -46,7 +52,6 @@ public class JwtAccessTokenIssuer : IAccessTokenIssuer
                 $"La audiencia '{request.Audience}' no está registrada en {JwtSettings.SectionName}:Audiences.", nameof(request));
         }
 
-        // exp, iat y nbf van en segundos: se trunca aquí para que ExpiresAt coincida con el claim exp.
         var now = _timeProvider.GetUtcNow();
         var issuedAt = DateTimeOffset.FromUnixTimeSeconds(now.ToUnixTimeSeconds());
         var expiresAt = issuedAt.AddMinutes(_settings.AccessTokenLifetimeMinutes);
@@ -88,7 +93,7 @@ public class JwtAccessTokenIssuer : IAccessTokenIssuer
             SigningCredentials = _signingKeyStore.SigningCredentials
         });
 
-        return new AccessToken(token, expiresAt);
+        return new AccessToken { Token = token, ExpiresAt = expiresAt };
     }
 
     public bool IsRegisteredAudience(string audience) =>

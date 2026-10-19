@@ -114,4 +114,11 @@ public static class AuthApi
 }
 
 /// <summary>Página de resultados tal como la serializa la API (<c>PagedResult</c>).</summary>
-public sealed record Page<T>(List<T> Items, int PageNumber, int PageSize, int TotalCount, int TotalPages);
+public sealed class Page<T>
+{
+    public required List<T> Items { get; set; }
+    public required int PageNumber { get; set; }
+    public required int PageSize { get; set; }
+    public required int TotalCount { get; set; }
+    public required int TotalPages { get; set; }
+}

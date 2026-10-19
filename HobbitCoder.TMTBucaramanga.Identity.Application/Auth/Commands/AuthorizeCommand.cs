@@ -44,12 +44,17 @@ public class AuthorizeCommandHandler : IRequestHandler<AuthorizeCommand, Authori
         _authSessionService = authSessionService;
     }
 
+    /// <summary>
+    ///     Atiende &lt;see cref="AuthorizeCommand"/&gt;.
+    /// </summary>
+    /// <remarks>
+    ///     El token de acceso sigue siendo válido hasta su exp aunque la sesión ya se haya cerrado.
+    /// </remarks>
     public async Task<AuthorizeResponse> Handle(AuthorizeCommand request, CancellationToken cancellationToken = default)
     {
         var userId = _currentUserService.GetRequiredUserId();
         var familyId = _currentUserService.GetRequiredSessionId();
 
-        // El token de acceso sigue siendo válido hasta su exp aunque la sesión ya se haya cerrado.
         if (!await _authSessionService.IsActiveAsync(familyId, cancellationToken))
         {
             throw new AuthenticationFailedException(InactiveSessionMessage);

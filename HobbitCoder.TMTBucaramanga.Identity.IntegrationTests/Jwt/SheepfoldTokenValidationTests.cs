@@ -31,7 +31,7 @@ public class SheepfoldTokenValidationTests : IClassFixture<SheepfoldConsumerFixt
     public async Task TokenIssuedByIdentity_IsAcceptedAndClaimsAreMapped()
     {
         var issuer = IdentityServices.GetRequiredService<IAccessTokenIssuer>();
-        var accessToken = issuer.Issue(new AccessTokenRequest("usuario-123", IdentityApiFactory.SheepfoldAudience, ["Admin", "Pastor"]));
+        var accessToken = issuer.Issue(new AccessTokenRequest { Subject = "usuario-123", Audience = IdentityApiFactory.SheepfoldAudience, Roles = ["Admin", "Pastor"] });
 
         var response = await SendToConsumerAsync(accessToken.Token);
 
@@ -42,10 +42,12 @@ public class SheepfoldTokenValidationTests : IClassFixture<SheepfoldConsumerFixt
         Assert.Equal(["Admin", "Pastor"], whoAmI.Roles.Order());
     }
 
+    /// <summary>
+    ///     Control de las pruebas de iss: el mismo token armado a mano, con el iss correcto, sí se acepta.
+    /// </summary>
     [Fact]
     public async Task TokenWithConfiguredIssuer_SignedWithActiveKey_IsAccepted()
     {
-        // Control de las pruebas de iss: el mismo token armado a mano, con el iss correcto, sí se acepta.
         var token = TestTokens.Create(ActiveSigningCredentials, IdentityApiFactory.Issuer, IdentityApiFactory.SheepfoldAudience);
 
         var response = await SendToConsumerAsync(token);
@@ -108,7 +110,7 @@ public class SheepfoldTokenValidationTests : IClassFixture<SheepfoldConsumerFixt
     public async Task TokenForAnotherAudience_IsRejected()
     {
         var issuer = IdentityServices.GetRequiredService<IAccessTokenIssuer>();
-        var accessToken = issuer.Issue(new AccessTokenRequest("usuario-123", IdentityApiFactory.OtherAudience, []));
+        var accessToken = issuer.Issue(new AccessTokenRequest { Subject = "usuario-123", Audience = IdentityApiFactory.OtherAudience, Roles = [] });
 
         var response = await SendToConsumerAsync(accessToken.Token);
 
@@ -116,12 +118,14 @@ public class SheepfoldTokenValidationTests : IClassFixture<SheepfoldConsumerFixt
         Assert.Contains("audience", GetAuthenticateError(response));
     }
 
+    /// <summary>
+    ///     Emitido hace dos horas: con 60 minutos de vida venció hace una hora, más que el margen de reloj.
+    /// </summary>
     [Fact]
     public async Task ExpiredToken_IsRejected()
     {
-        // Emitido hace dos horas: con 60 minutos de vida venció hace una hora, más que el margen de reloj.
         var issuer = TestTokens.CreateIssuerAt(IdentityServices, DateTimeOffset.UtcNow.AddHours(-2));
-        var accessToken = issuer.Issue(new AccessTokenRequest("usuario-123", IdentityApiFactory.SheepfoldAudience, []));
+        var accessToken = issuer.Issue(new AccessTokenRequest { Subject = "usuario-123", Audience = IdentityApiFactory.SheepfoldAudience, Roles = [] });
 
         var response = await SendToConsumerAsync(accessToken.Token);
 

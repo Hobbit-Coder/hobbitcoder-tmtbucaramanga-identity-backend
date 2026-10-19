@@ -7,10 +7,8 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Cargar variables de entorno en la configuración
 builder.Configuration.AddEnvironmentVariables();
 
-// Add services to the container.
 builder.AddPersistence();
 builder.AddApplication();
 builder.AddWebAPI();
@@ -19,15 +17,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ErrorExceptionHandler>();
 
-// Los enums viajan como texto ("Leader", "WhatsApp"): el contrato se lee sin tablas de códigos.
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

@@ -3,23 +3,39 @@ using System.Text.Json.Serialization;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Common.Models;
 
 /// <summary>Documento de <c>/.well-known/openid-configuration</c>.</summary>
-public sealed record OpenIdConfigurationResponse(
-    [property: JsonPropertyName("issuer")] string Issuer,
-    [property: JsonPropertyName("jwks_uri")] string JwksUri,
-    [property: JsonPropertyName("id_token_signing_alg_values_supported")] IReadOnlyList<string> IdTokenSigningAlgValuesSupported);
+public sealed class OpenIdConfigurationResponse
+{
+    [JsonPropertyName("issuer")]
+    public required string Issuer { get; set; }
+    [JsonPropertyName("jwks_uri")]
+    public required string JwksUri { get; set; }
+    [JsonPropertyName("id_token_signing_alg_values_supported")]
+    public required IReadOnlyList<string> IdTokenSigningAlgValuesSupported { get; set; }
+}
 
 /// <summary>Documento de <c>/.well-known/jwks.json</c>.</summary>
-public sealed record JsonWebKeySetResponse(
-    [property: JsonPropertyName("keys")] IReadOnlyList<PublicJsonWebKey> Keys);
+public sealed class JsonWebKeySetResponse
+{
+    [JsonPropertyName("keys")]
+    public required IReadOnlyList<PublicJsonWebKey> Keys { get; set; }
+}
 
 /// <summary>
 /// Clave pública RSA en formato JWK. Solo tiene los parámetros públicos (<c>n</c>, <c>e</c>), así que
 /// no puede exponer los privados aunque la clave de origen los tenga.
 /// </summary>
-public sealed record PublicJsonWebKey(
-    [property: JsonPropertyName("kty")] string Kty,
-    [property: JsonPropertyName("use")] string Use,
-    [property: JsonPropertyName("alg")] string Alg,
-    [property: JsonPropertyName("kid")] string Kid,
-    [property: JsonPropertyName("n")] string N,
-    [property: JsonPropertyName("e")] string E);
+public sealed class PublicJsonWebKey
+{
+    [JsonPropertyName("kty")]
+    public required string Kty { get; set; }
+    [JsonPropertyName("use")]
+    public required string Use { get; set; }
+    [JsonPropertyName("alg")]
+    public required string Alg { get; set; }
+    [JsonPropertyName("kid")]
+    public required string Kid { get; set; }
+    [JsonPropertyName("n")]
+    public required string N { get; set; }
+    [JsonPropertyName("e")]
+    public required string E { get; set; }
+}

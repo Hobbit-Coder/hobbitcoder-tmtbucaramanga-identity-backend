@@ -3,19 +3,6 @@ using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 
-/// <summary>Estado del acceso de la cuenta, derivado de su activación y de su contraseña.</summary>
-public enum AccessStatus
-{
-    /// <summary>El titular todavía no completa el primer ingreso.</summary>
-    PendingActivation = 1,
-
-    /// <summary>Puede ingresar con su contraseña.</summary>
-    Ready = 2,
-
-    /// <summary>La administración pidió que cree una contraseña nueva.</summary>
-    PasswordResetRequested = 3
-}
-
 public class UserResponse
 {
     public required Guid Id { get; set; }
@@ -28,7 +15,7 @@ public class UserResponse
     public string? Instagram { get; set; }
     public DateOnly? BirthDate { get; set; }
 
-    /// <summary>Edad calculada con la fecha de nacimiento (§5); no se captura.</summary>
+    /// <summary>Edad calculada con la fecha de nacimiento; no se captura.</summary>
     public int? Age { get; set; }
 
     public required UserRole Role { get; set; }

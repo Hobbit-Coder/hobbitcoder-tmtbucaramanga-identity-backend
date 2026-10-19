@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
 /// <summary>
-/// Administración de cuentas (§4.1, §4.5, HU-03). La usan el administrador y el director con un token para
+/// Administración de cuentas. La usan el administrador y el director con un token para
 /// la audiencia de Identity. Las cuentas con rol Administrador solo las administra otro administrador.
 /// Ningún endpoint define contraseñas de terceros.
 /// </summary>
@@ -37,7 +37,7 @@ public class UsersController : ControllerBase
         return Ok(await _mediator.Send<GetUsersQuery, PagedResult<UserResponse>>(query, cancellationToken));
     }
 
-    /// <summary>Cuentas retiradas o desactivadas (§26).</summary>
+    /// <summary>Cuentas retiradas o desactivadas.</summary>
     [HttpGet("retired")]
     [ProducesResponseType<PagedResult<UserResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

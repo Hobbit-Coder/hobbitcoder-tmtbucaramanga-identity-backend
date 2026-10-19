@@ -12,7 +12,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Commands;
 
 /// <summary>
 /// Inicia una sesión con un identificador de acceso (teléfono, nombre de usuario o correo registrado) y la
-/// contraseña (§6).
+/// contraseña.
 /// </summary>
 public class LoginCommand : IRequest<AuthResponse>
 {
@@ -34,7 +34,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
     public const string InvalidCredentialsMessage = "Invalid credentials.";
 
     /// <summary>
-    /// Cuenta desactivada con la contraseña correcta (HU-02): se informa que el acceso no está disponible. Solo
+    /// Cuenta desactivada con la contraseña correcta: se informa que el acceso no está disponible. Solo
     /// lo sabe quien ya conoce la contraseña, así que no revela qué cuentas existen.
     /// </summary>
     public const string AccountUnavailableMessage = "The account is not available.";

@@ -14,6 +14,11 @@ public interface IRefreshTokenGenerator
     string ComputeHash(string token);
 }
 
-/// <param name="Token">Valor opaco que recibe el cliente.</param>
-/// <param name="TokenHash">Hash que se persiste.</param>
-public sealed record GeneratedRefreshToken(string Token, string TokenHash);
+public sealed class GeneratedRefreshToken
+{
+    /// <summary>Valor opaco que recibe el cliente.</summary>
+    public required string Token { get; set; }
+
+    /// <summary>Hash que se persiste.</summary>
+    public required string TokenHash { get; set; }
+}

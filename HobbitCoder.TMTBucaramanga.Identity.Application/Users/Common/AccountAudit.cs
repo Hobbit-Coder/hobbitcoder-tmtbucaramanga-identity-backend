@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Common;
 
 /// <summary>
-/// Registra en la auditoría de cuentas (§25) los cambios hechos sobre una cuenta. Se agrega al mismo
+/// Registra en la auditoría de cuentas los cambios hechos sobre una cuenta. Se agrega al mismo
 /// <c>SaveChanges</c> del cambio, así que ambos se guardan o fallan juntos.
 /// </summary>
 public static class AccountAudit
@@ -18,10 +18,21 @@ public static class AccountAudit
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        return new AccountSnapshot(
-            user.FirstName, user.LastName, user.Gender?.ToString(), user.PhoneNumber, user.Email, user.UserName,
-            user.Instagram, user.BirthDate, user.Role.ToString(), user.IsActive, user.CanRegisterAttendees,
-            UserResponse.GetAccessStatus(user).ToString());
+        return new AccountSnapshot
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Gender = user.Gender?.ToString(),
+            PhoneNumber = user.PhoneNumber,
+            Email = user.Email,
+            UserName = user.UserName,
+            Instagram = user.Instagram,
+            BirthDate = user.BirthDate,
+            Role = user.Role.ToString(),
+            IsActive = user.IsActive,
+            CanRegisterAttendees = user.CanRegisterAttendees,
+            AccessStatus = UserResponse.GetAccessStatus(user).ToString()
+        };
     }
 
     public static void Record(
@@ -49,17 +60,3 @@ public static class AccountAudit
         });
     }
 }
-
-public sealed record AccountSnapshot(
-    string FirstName,
-    string LastName,
-    string? Gender,
-    string? PhoneNumber,
-    string? Email,
-    string? UserName,
-    string? Instagram,
-    DateOnly? BirthDate,
-    string Role,
-    bool IsActive,
-    bool CanRegisterAttendees,
-    string AccessStatus);

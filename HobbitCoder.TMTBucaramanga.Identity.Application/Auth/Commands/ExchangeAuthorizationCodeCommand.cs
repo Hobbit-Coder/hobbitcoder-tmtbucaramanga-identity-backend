@@ -52,6 +52,12 @@ public class ExchangeAuthorizationCodeCommandHandler : IRequestHandler<ExchangeA
         _logger = logger;
     }
 
+    /// <summary>
+    ///     Atiende &lt;see cref="ExchangeAuthorizationCodeCommand"/&gt;.
+    /// </summary>
+    /// <remarks>
+    ///     El cliente pudo quitarse de la configuración después de emitir el código.
+    /// </remarks>
     public async Task<AuthResponse> Handle(ExchangeAuthorizationCodeCommand request, CancellationToken cancellationToken = default)
     {
         var codeHash = _authorizationCodeGenerator.ComputeHash(request.Code);
@@ -81,7 +87,6 @@ public class ExchangeAuthorizationCodeCommandHandler : IRequestHandler<ExchangeA
             throw new AuthenticationFailedException(InvalidCodeMessage);
         }
 
-        // El cliente pudo quitarse de la configuración después de emitir el código.
         var client = _clientRegistry.FindClient(authorizationCode.ClientId)
             ?? throw new AuthenticationFailedException(InvalidCodeMessage);
         var user = await FindActiveUserAsync(authorizationCode, cancellationToken);
@@ -89,6 +94,12 @@ public class ExchangeAuthorizationCodeCommandHandler : IRequestHandler<ExchangeA
         return await _authSessionService.JoinAsync(user, client.Audience, authorizationCode.FamilyId, cancellationToken);
     }
 
+    /// <summary>
+    ///     Marca el código de autorización como canjeado.
+    /// </summary>
+    /// <remarks>
+    ///     Otra petición canjeó el mismo código entre la lectura y el guardado.
+    /// </remarks>
     private async Task ConsumeAsync(AuthorizationCode authorizationCode, DateTime now, CancellationToken cancellationToken)
     {
         authorizationCode.Consume(now);
@@ -99,7 +110,6 @@ public class ExchangeAuthorizationCodeCommandHandler : IRequestHandler<ExchangeA
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            // Otra petición canjeó el mismo código entre la lectura y el guardado.
             throw new AuthenticationFailedException(InvalidCodeMessage, exception);
         }
     }

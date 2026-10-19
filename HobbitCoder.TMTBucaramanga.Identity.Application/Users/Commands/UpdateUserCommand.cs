@@ -15,7 +15,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.Application.Users.Commands;
 
 /// <summary>
 /// La administración actualiza una cuenta: datos del perfil, rol, estado y designación para registrar
-/// asistentes. Nunca la contraseña (§6). Desactivar cierra todas las sesiones de la cuenta.
+/// asistentes. Nunca la contraseña. Desactivar cierra todas las sesiones de la cuenta.
 /// </summary>
 /// <remarks>
 /// Los tokens de acceso ya emitidos conservan el rol anterior hasta su <c>exp</c>; el siguiente refresh ya

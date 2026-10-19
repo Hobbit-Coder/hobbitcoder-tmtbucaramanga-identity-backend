@@ -1,4 +1,5 @@
 using FluentValidation;
+using HobbitCoder.TMTBucaramanga.Identity.Application.Auth.Common;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Exceptions;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Application.Common.Models;
@@ -17,8 +18,6 @@ public class IssueServiceTokenCommand : IRequest<ServiceTokenResponse>
     public required string ClientId { get; set; }
     public required string ClientSecret { get; set; }
 }
-
-public sealed record ServiceTokenResponse(string AccessToken, string TokenType, int ExpiresIn);
 
 public class IssueServiceTokenCommandHandler : IRequestHandler<IssueServiceTokenCommand, ServiceTokenResponse>
 {
@@ -43,10 +42,10 @@ public class IssueServiceTokenCommandHandler : IRequestHandler<IssueServiceToken
             throw new AuthenticationFailedException(InvalidClientMessage);
         }
 
-        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest(request.ClientId, IdentityAudience, [RoleNames.Service]));
+        var accessToken = _accessTokenIssuer.Issue(new AccessTokenRequest { Subject = request.ClientId, Audience = IdentityAudience, Roles = [RoleNames.Service] });
         var expiresIn = (int)Math.Max(0, (accessToken.ExpiresAt - _timeProvider.GetUtcNow()).TotalSeconds);
 
-        return Task.FromResult(new ServiceTokenResponse(accessToken.Token, "Bearer", expiresIn));
+        return Task.FromResult(new ServiceTokenResponse { AccessToken = accessToken.Token, TokenType = "Bearer", ExpiresIn = expiresIn });
     }
 }
 
