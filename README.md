@@ -25,6 +25,7 @@ Identity y reciben un código de autorización que cambian por tokens (OAuth 2.0
 | `Jwt:PreviousSigningKeys` | Claves de rotaciones anteriores que se siguen publicando en el JWKS. Ver [Rotación de claves](#rotación-de-claves). |
 | `Jwt:ServiceClients` | Aplicaciones de servidor que consultan el directorio (`ClientId`, `Secret` de 32+ caracteres). Ver [Directorio](#directorio-para-sheepfold). |
 | `Bootstrap:Admin:UserName` / `PhoneNumber` / `Password` | Administrador que se crea al arrancar si no hay ninguno (user-secrets o variables de entorno, nunca `appsettings`). Ver [Primer administrador](#primer-administrador). |
+| `Seeding:Enabled` | `true` crea al arrancar las cuentas de la carga inicial 2026 (directores, coordinadores y líderes). Ver [Carga inicial](#carga-inicial). |
 | `Verification:CodeLength` / `LifetimeMinutes` / `MaxAttempts` | Política de los códigos de seguridad. Por defecto `6`, `15` y `5`: el requerimiento no los fija (contrato pendiente). |
 | `Messaging:Provider` / `Evolution:*` / `Meta:*` / `TimeoutSeconds` | WhatsApp para los códigos: Evolution API autoalojado (por defecto) o WhatsApp Cloud API de Meta. Ver [Mensajes de seguridad](#mensajes-de-seguridad-whatsapp). |
 | `CorsSettings:*` | Política CORS por ambiente, en los `appsettings`. Ver [CORS](#cors). |
@@ -140,6 +141,15 @@ SELECT gen_random_uuid(), :'nombres', :'apellidos', TRUE, FALSE, 'manual:primer-
        FALSE, replace(gen_random_uuid()::text, '-', ''), gen_random_uuid()::text, :'telefono', FALSE, FALSE, TRUE, 0, FALSE, 'Admin'
 WHERE NOT EXISTS (SELECT 1 FROM "Identity"."AspNetUsers" WHERE "Role" = 'Admin');
 ```
+
+### Carga inicial
+
+Con `Seeding:Enabled=true` (variable `Seeding__Enabled` o user-secrets), `IdentitySeeder` crea al arrancar las 28 cuentas
+de `Infrastructure/Persistence/Seeding/identity-seed.json`: 2 directores, 4 coordinadores y 22 líderes, sin contraseña;
+cada titular activa la suya en "Es mi primer ingreso". Corre después del primer administrador y solo una vez: si
+alguna de esas cuentas ya existe (aunque esté eliminada) no hace nada. Una cuenta cuyo teléfono o usuario ya está en
+uso no se crea y queda advertida en el log. Sus Id fijos son los que usa la carga inicial de Sheepfold, así que
+**Identity se siembra primero**. El JSON se genera con `docs/resources/bases-grupos/generar-semillas.py`.
 
 ### Junto con Sheepfold y los frontends
 
