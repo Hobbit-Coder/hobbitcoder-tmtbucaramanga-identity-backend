@@ -1,0 +1,284 @@
+{
+  "users": [
+    {
+      "id": "cbc74627-9a6d-562a-befd-7709e508eeb3",
+      "firstName": "Marlon Andres",
+      "lastName": "Hurtado",
+      "gender": "Male",
+      "phoneNumber": "+573174910851",
+      "userName": "marlon.hurtado",
+      "role": "Director",
+      "isActive": true
+    },
+    {
+      "id": "c702540f-caaf-5ac0-942f-822bcd3f362f",
+      "firstName": "Silvia Juliana",
+      "lastName": "Pinto",
+      "gender": "Female",
+      "phoneNumber": "+573228355226",
+      "userName": "silvia.pinto",
+      "role": "Director",
+      "isActive": true
+    },
+    {
+      "id": "ab25cc34-da44-54e5-b420-2027702fba19",
+      "firstName": "Karen Sofia",
+      "lastName": "Lopez",
+      "gender": "Female",
+      "phoneNumber": "+573214424055",
+      "userName": "karen.lopez",
+      "role": "Coordinator",
+      "isActive": true
+    },
+    {
+      "id": "f1776861-1811-5152-9223-c08d9c18c400",
+      "firstName": "Silvia Juliana",
+      "lastName": "Suarez",
+      "gender": "Female",
+      "phoneNumber": "+573187461607",
+      "userName": "silvia.suarez",
+      "role": "Coordinator",
+      "isActive": true
+    },
+    {
+      "id": "98e0cc00-008e-5ab1-82ce-85bdb17c0031",
+      "firstName": "Luis Fernando",
+      "lastName": "Uribe",
+      "gender": "Male",
+      "phoneNumber": "+573153980337",
+      "userName": "luis.uribe",
+      "role": "Coordinator",
+      "isActive": true
+    },
+    {
+      "id": "6e2e718a-d19f-510c-807f-eb22a6753b05",
+      "firstName": "Mayerly",
+      "lastName": "Castellanos",
+      "gender": "Female",
+      "phoneNumber": "+573157020721",
+      "userName": "mayerly.castellanos",
+      "role": "Coordinator",
+      "isActive": true
+    },
+    {
+      "id": "3df1c14d-a898-5451-bd9c-11c7c30ed45e",
+      "firstName": "Rubén",
+      "lastName": "Alvarez",
+      "gender": "Male",
+      "phoneNumber": "+573189019430",
+      "userName": "ruben.alvarez",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "d08a29bf-fc57-5536-b65f-25b412777ba6",
+      "firstName": "María José",
+      "lastName": "Castellanos",
+      "gender": "Female",
+      "phoneNumber": "+573212584066",
+      "userName": "maria.castellanos",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "97d49773-3bce-5494-ae66-5be86268d0ff",
+      "firstName": "Oscar",
+      "lastName": "Acevedo",
+      "gender": "Male",
+      "phoneNumber": "+573157971000",
+      "userName": "oscar.acevedo",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "ed5c9bd2-76e5-546a-9b17-f1805eef9be9",
+      "firstName": "Ana Lucia",
+      "lastName": "Arenas",
+      "gender": "Female",
+      "phoneNumber": "+573156357615",
+      "userName": "ana.arenas",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "0d5ee0f0-1d3c-5716-bd99-b1e82b7532a9",
+      "firstName": "David",
+      "lastName": "Leal",
+      "gender": "Male",
+      "phoneNumber": "+573007974616",
+      "userName": "david.leal",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "1187d7eb-a6a1-5498-8c5f-edfbaf1f97dc",
+      "firstName": "María",
+      "lastName": "Salgado",
+      "gender": "Female",
+      "phoneNumber": "+573044770065",
+      "userName": "maria.salgado",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "2853b30d-bd0f-5edd-b8b1-938b6baba218",
+      "firstName": "Yeissir Andres",
+      "lastName": "Pantoja Vargas",
+      "gender": "Male",
+      "phoneNumber": "+573024550084",
+      "userName": "yeissir.pantoja",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "87839e8c-2924-53a6-99e6-338cb357c327",
+      "firstName": "Diana",
+      "lastName": "Luna",
+      "gender": "Female",
+      "phoneNumber": "+573014176584",
+      "userName": "diana.luna",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "342bb0b4-5014-5a86-9f2b-4b7497a22dc6",
+      "firstName": "Oscar Giovanny",
+      "lastName": "Almeida Merchan",
+      "gender": "Male",
+      "phoneNumber": "+573125588665",
+      "userName": "oscar.almeida",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "f21d80ea-bbb6-594f-b730-61478e445933",
+      "firstName": "Mariana",
+      "lastName": "Suarez",
+      "gender": "Female",
+      "phoneNumber": "+573022162418",
+      "userName": "mariana.suarez",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "0d603c5b-9ea1-5633-a13f-0c3dcd7941b1",
+      "firstName": "Daniel",
+      "lastName": "Pinilla",
+      "gender": "Male",
+      "phoneNumber": "+573054758497",
+      "userName": "daniel.pinilla",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "820d9629-c3e3-5b33-a264-4c203b240717",
+      "firstName": "Maria Fernanda",
+      "lastName": "Serrano",
+      "gender": "Female",
+      "phoneNumber": "+573204694580",
+      "userName": "maria.serrano",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "cf09df39-022e-5edc-8f70-85c82a7ab83a",
+      "firstName": "David",
+      "lastName": "Ruiz",
+      "gender": "Male",
+      "phoneNumber": "+573155405572",
+      "userName": "david.ruiz",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "c9e3f1e6-45bc-57d9-98a8-f673e7d43764",
+      "firstName": "Lizeth",
+      "lastName": "Rudas",
+      "gender": "Female",
+      "phoneNumber": "+573214730267",
+      "userName": "lizeth.rudas",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "025089d2-a1a0-5897-b066-c765e932fd89",
+      "firstName": "Jorge",
+      "lastName": "Castro",
+      "gender": "Male",
+      "phoneNumber": "+573229423460",
+      "userName": "jorge.castro",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "9d86391a-a392-5061-896b-5ea31b292b59",
+      "firstName": "Karen",
+      "lastName": "Sepulveda",
+      "gender": "Female",
+      "phoneNumber": "+573053631477",
+      "userName": "karen.sepulveda",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "e1462bf0-26a9-5df5-9709-a02f85466660",
+      "firstName": "Julieth",
+      "lastName": "Duran",
+      "gender": "Female",
+      "phoneNumber": "+573186505556",
+      "userName": "julieth.duran",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "1ab26d77-fe76-5e93-927e-4d79c67bdd67",
+      "firstName": "Santiago",
+      "lastName": "Diaz",
+      "gender": "Male",
+      "phoneNumber": "+573158251113",
+      "userName": "santiago.diaz",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "422afde4-ef2d-543f-bddb-2876c8b86bb5",
+      "firstName": "María",
+      "lastName": "Trejos",
+      "gender": "Female",
+      "phoneNumber": "+573175801824",
+      "userName": "maria.trejos",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "1fd86536-a940-5713-abd2-bf6b0ebc9e88",
+      "firstName": "Leonardo",
+      "lastName": "Montoya",
+      "gender": "Male",
+      "phoneNumber": "+573003451570",
+      "userName": "leonardo.montoya",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "e4a14e21-bf04-573a-9d16-8cff670e6f5b",
+      "firstName": "Jose Manuel",
+      "lastName": "Copete",
+      "gender": "Male",
+      "phoneNumber": "+573007481237",
+      "userName": "jose.copete",
+      "role": "Leader",
+      "isActive": true
+    },
+    {
+      "id": "38d22ec3-699e-5218-bff9-0adc2bdae2d8",
+      "firstName": "Aura",
+      "lastName": "Duarte",
+      "gender": "Female",
+      "phoneNumber": "+573006780161",
+      "userName": "aura.duarte",
+      "role": "Leader",
+      "isActive": true
+    }
+  ]
+}
