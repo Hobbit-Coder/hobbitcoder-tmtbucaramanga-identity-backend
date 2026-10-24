@@ -171,7 +171,7 @@ ejecución, crea la base con `dotnet ef database update` (ver [Migraciones](#mig
 
 ## Cuentas, roles e identificadores
 
-Cada cuenta tiene **un rol** (§3.1): `Admin`, `Director`, `Coordinator`, `Leader` o `Apprentice`, guardado en la
+Cada cuenta tiene **un rol** (§3.1): `Admin`, `Director`, `Coordinator`, `Leader`, `Apprentice` o `Sniper`, guardado en la
 propia cuenta (no hay tablas de roles). Se emite en el claim `role`; si la cuenta está designada para registrar
 asistentes (§7) el token lleva además `permission: RegisterAttendees`.
 

@@ -12,6 +12,7 @@ public static class RoleNames
     public const string Coordinator = "Coordinator";
     public const string Leader = "Leader";
     public const string Apprentice = "Apprentice";
+    public const string Sniper = "Sniper";
 
     /// <summary>Aplicaciones (no personas) autenticadas con credenciales de servicio, como la API de Sheepfold.</summary>
     public const string Service = "Service";
