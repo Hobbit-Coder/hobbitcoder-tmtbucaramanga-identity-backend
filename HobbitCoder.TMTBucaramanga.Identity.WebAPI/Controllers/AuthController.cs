@@ -6,6 +6,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
@@ -27,6 +28,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(Configuration.PublicSecurityRateLimit)]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

@@ -6,6 +6,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 
@@ -17,6 +18,7 @@ namespace HobbitCoder.TMTBucaramanga.Identity.WebAPI.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [AllowAnonymous]
+[EnableRateLimiting(Configuration.PublicSecurityRateLimit)]
 public class AccountController : ControllerBase
 {
     private readonly IMediator _mediator;

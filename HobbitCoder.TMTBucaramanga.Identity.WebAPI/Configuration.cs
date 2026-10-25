@@ -11,6 +11,7 @@ public static partial class Configuration
         builder.AddJwtSettings();
         builder.AddSecurityMessaging();
         builder.AddAdminBootstrap();
+        builder.AddRateLimiting();
 
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
