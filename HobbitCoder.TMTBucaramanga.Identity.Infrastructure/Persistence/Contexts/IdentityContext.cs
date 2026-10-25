@@ -3,6 +3,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities.Common;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Linq.Expressions;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Infrastructure.Persistence.Contexts;
@@ -27,6 +28,19 @@ public class IdentityContext : IdentityUserContext<User, Guid>, IApplicationDbCo
         VerificationRequests = Set<VerificationRequest>();
         AccountAuditEntries = Set<AccountAuditEntry>();
     }
+
+    /// <summary>
+    /// Las fechas se guardan en UTC y se leen marcadas como UTC: SQL Server las devuelve sin zona y la API las
+    /// enviaría sin la <c>Z</c>.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
+    private sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(
+        value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
     /// <summary>
     ///     Configura el modelo de la base de datos de identidad.
