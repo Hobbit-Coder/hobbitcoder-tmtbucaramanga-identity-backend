@@ -129,6 +129,25 @@ public class AccountTests : IClassFixture<DatabaseApiFixture>
         Assert.Equal(HttpStatusCode.BadRequest, confirm.StatusCode);
     }
 
+    [Fact]
+    public async Task NewCode_IsNotSentAgainWithinAMinute_AndTheFirstOneKeepsWorking()
+    {
+        var account = await _fixture.CreateAccountAsync(_client, activate: false);
+        var sentBefore = _fixture.Messages.Messages.Count(message => message.PhoneNumber == account.PhoneNumber);
+        var body = new { identifier = account.UserName, channel = VerificationChannel.Sms, purpose = VerificationPurpose.Activation };
+
+        using var first = await _client.SendAsync(HttpMethod.Post, "/api/account/verification", null, body);
+        using var second = await _client.SendAsync(HttpMethod.Post, "/api/account/verification", null, body);
+
+        var verificationId = (await first.ReadAsync<StartVerificationResponse>()).VerificationId;
+        Assert.Equal(verificationId, (await second.ReadAsync<StartVerificationResponse>()).VerificationId);
+        Assert.Equal(sentBefore + 1, _fixture.Messages.Messages.Count(message => message.PhoneNumber == account.PhoneNumber));
+
+        using var confirm = await _client.SendAsync(HttpMethod.Post, "/api/account/verification/confirm", null,
+            new { verificationId, code = _fixture.Messages.LastTo(account.PhoneNumber).Code });
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+    }
+
     /// <summary>
     ///     El mismo token sigue sirviendo para completar la activación.
     /// </summary>

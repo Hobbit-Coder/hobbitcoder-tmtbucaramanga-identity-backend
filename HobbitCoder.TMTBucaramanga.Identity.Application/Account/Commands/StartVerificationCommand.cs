@@ -6,6 +6,7 @@ using HobbitCoder.TMTBucaramanga.Identity.Domain.Entities;
 using HobbitCoder.TMTBucaramanga.Identity.Domain.Enums;
 using HobbitCoder.TMTBucaramanga.Identity.Mediator.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace HobbitCoder.TMTBucaramanga.Identity.Application.Account.Commands;
@@ -31,6 +32,9 @@ public class StartVerificationCommand : IRequest<StartVerificationResponse>
 
 public class StartVerificationCommandHandler : IRequestHandler<StartVerificationCommand, StartVerificationResponse>
 {
+    /// <summary>Tiempo mínimo entre dos envíos a la misma cuenta: evita llenar su teléfono de mensajes.</summary>
+    public static readonly TimeSpan ResendInterval = TimeSpan.FromMinutes(1);
+
     private readonly IApplicationDbContext _dbContext;
     private readonly ILookupNormalizer _normalizer;
     private readonly IVerificationSecrets _secrets;
@@ -66,8 +70,19 @@ public class StartVerificationCommandHandler : IRequestHandler<StartVerification
             return new StartVerificationResponse { VerificationId = Guid.CreateVersion7() };
         }
 
-        var code = _secrets.CreateCode();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var recentId = await _dbContext.VerificationRequests
+            .Where(item => item.UserId == user.Id && item.Purpose == request.Purpose && item.CreatedAt > now - ResendInterval)
+            .Select(item => (Guid?)item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (recentId is { } id)
+        {
+            _logger.LogInformation("Verificación no reenviada: la cuenta {UserId} recibió un código hace menos de {Interval}.", user.Id, ResendInterval);
+            return new StartVerificationResponse { VerificationId = id };
+        }
+
+        var code = _secrets.CreateCode();
         var verification = new VerificationRequest
         {
             UserId = user.Id,
@@ -81,7 +96,17 @@ public class StartVerificationCommandHandler : IRequestHandler<StartVerification
         _dbContext.VerificationRequests.Add(verification);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await _messageSender.SendVerificationCodeAsync(user.PhoneNumber!, request.Channel, request.Purpose, code, cancellationToken);
+        try
+        {
+            await _messageSender.SendVerificationCodeAsync(user.PhoneNumber!, request.Channel, request.Purpose, code, cancellationToken);
+        }
+        catch
+        {
+            // Un código que no llegó no debe frenar el siguiente intento (ver ResendInterval).
+            _dbContext.VerificationRequests.Remove(verification);
+            await _dbContext.SaveChangesAsync(CancellationToken.None);
+            throw;
+        }
 
         return new StartVerificationResponse { VerificationId = verification.Id };
     }
